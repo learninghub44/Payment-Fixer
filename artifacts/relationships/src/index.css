@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* KUWESA Design System — Green/White, modern youth styling.
+   All colors MUST be HSL. */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 150 25% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 25% 12%;
+
+    /* KUWESA green #0f9d58 -> HSL ~ 147 82% 34% */
+    --primary: 147 82% 34%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 147 70% 48%;
+    --primary-deep: 147 85% 22%;
+
+    --secondary: 147 40% 96%;
+    --secondary-foreground: 147 82% 22%;
+
+    --muted: 150 20% 96%;
+    --muted-foreground: 150 10% 40%;
+
+    --accent: 45 95% 55%; /* gold accent from logo cap */
+    --accent-foreground: 150 30% 12%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 20% 90%;
+    --input: 150 20% 90%;
+    --ring: 147 82% 34%;
+
+    --radius: 1rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-glow)) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(147 85% 22%) 0%, hsl(147 82% 34%) 50%, hsl(147 70% 48%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(147 40% 98%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(147 30% 98%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(147 60% 30% / 0.12);
+    --shadow-elegant: 0 20px 50px -15px hsl(147 60% 25% / 0.25);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.45);
+    --shadow-card: 0 8px 30px -10px hsl(147 60% 30% / 0.15);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 147 82% 34%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 147 40% 95%;
+    --sidebar-accent-foreground: 147 82% 22%;
+    --sidebar-border: 150 20% 90%;
+    --sidebar-ring: 147 82% 34%;
+  }
+
+  .dark {
+    --background: 150 30% 6%;
+    --foreground: 150 10% 95%;
+
+    --card: 150 25% 9%;
+    --card-foreground: 150 10% 95%;
+
+    --popover: 150 25% 9%;
+    --popover-foreground: 150 10% 95%;
+
+    --primary: 147 70% 48%;
+    --primary-foreground: 150 30% 8%;
+    --primary-glow: 147 80% 60%;
+    --primary-deep: 147 85% 22%;
+
+    --secondary: 150 20% 15%;
+    --secondary-foreground: 150 10% 95%;
+
+    --muted: 150 20% 14%;
+    --muted-foreground: 150 10% 65%;
+
+    --accent: 45 95% 55%;
+    --accent-foreground: 150 30% 8%;
+
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 20% 18%;
+    --input: 150 20% 18%;
+    --ring: 147 70% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv01";
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-primary { background: var(--gradient-primary); }
+  .bg-gradient-hero { background: var(--gradient-hero); }
+  .bg-gradient-soft { background: var(--gradient-soft); }
+  .bg-gradient-card { background: var(--gradient-card); }
+
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-elegant { box-shadow: var(--shadow-elegant); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+
+  .transition-smooth { transition: var(--transition-smooth); }
+  .transition-bounce { transition: var(--transition-bounce); }
+
+  .text-balance { text-wrap: balance; }
+}
+
+@layer components {
+  .section-padding { @apply py-20 px-4 sm:px-6 lg:px-8; }
+  .container-custom { @apply max-w-7xl mx-auto; }
+}
