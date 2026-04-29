@@ -1,7 +1,7 @@
 services:
   # Backend API Service
   - type: web
-    name: kuwesa-api
+    name: kuwesa-payment-api
     runtime: node
     plan: free
     buildCommand: cd artifacts/api-server && cp package-standalone.json package.json && npm install && npm run build
@@ -15,18 +15,18 @@ services:
 
   # Frontend Service
   - type: web
-    name: kuwesa-frontend
+    name: kuwesa-payment-frontend
     runtime: static
     plan: free
     buildCommand: cd artifacts/relationships && npm install && npm run build
     staticPublishPath: artifacts/relationships/dist/public
     envVars:
       - key: VITE_API_URL
-        value: https://kuwesa-api.onrender.com/api
+        value: https://kuwesa-payment-api.onrender.com/api
     routes:
       - type: rewrite
         source: /api/*
-        destination: https://kuwesa-api.onrender.com/api/*
+        destination: https://kuwesa-payment-api.onrender.com/api/*
       - type: file
         source: /**
         destination: /index.html
