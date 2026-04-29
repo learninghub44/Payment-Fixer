@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Heart, HandHeart, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
-import { createPesapalOrder } from "@/lib/pesapal";
+import { createPesapalOrder, navigateToPesapal } from "@/lib/pesapal";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -78,7 +78,7 @@ export const Welfare = () => {
         payerEmail: form.email,
         description: `Welfare: ${active.title}`,
       });
-      window.location.href = order.redirect_url;
+      navigateToPesapal(order.redirect_url);
     } catch (e: any) {
       setBusy(false);
       toast({ title: "Payment failed to start", description: e?.message, variant: "destructive" });

@@ -36,7 +36,7 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm text-white/80">
               <li><a href="tel:+254745523865" className="hover:text-accent transition-smooth">+254 745 523 865</a></li>
               <li><a href="mailto:kuwesa12@gmail.com" className="hover:text-accent transition-smooth break-all">kuwesa12@gmail.com</a></li>
-              <li><Link to="/admin" className="hover:text-accent transition-smooth">Admin Panel</Link></li>
+              <li><Link to="/admin" className="hover:text-accent transition-smooth">Management Portal</Link></li>
             </ul>
           </div>
         </div>

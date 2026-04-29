@@ -9,7 +9,7 @@ import {
 import { Check, CreditCard, Sparkles, Crown, Star, GraduationCap, Shield, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
-import { createPesapalOrder } from "@/lib/pesapal";
+import { createPesapalOrder, navigateToPesapal } from "@/lib/pesapal";
 import { cn } from "@/lib/utils";
 
 type Step = "tier" | "register" | "pay";
@@ -149,7 +149,7 @@ export const Membership = () => {
         payerEmail: form.email,
         description: `KUWESA ${tier.name} – ${form.fullName}`,
       });
-      window.location.href = order.redirect_url;
+      navigateToPesapal(order.redirect_url);
     } catch (e: any) {
       setBusy(false);
       toast({ title: "Payment failed to start", description: e?.message, variant: "destructive" });

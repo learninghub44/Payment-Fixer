@@ -21,7 +21,7 @@ export const Hero = () => {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero pt-24 pb-16"
+      className="relative min-h-[88vh] sm:min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero pt-20 pb-12 sm:pt-24 sm:pb-16"
     >
       {/* Cross-fade carousel */}
       <div className="absolute inset-0">
@@ -50,16 +50,16 @@ export const Hero = () => {
       </div>
 
       <div className="container-custom relative z-10 text-center px-4 sm:px-6">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-accent/40 text-white text-xs font-medium mb-8 animate-fade-in">
-          <Sparkles className="h-3.5 w-3.5 text-accent" />
+        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-accent/40 text-white text-[11px] sm:text-xs font-medium mb-5 sm:mb-8 animate-fade-in">
+          <Sparkles className="h-3.5 w-3.5 text-accent flex-shrink-0" />
           <span className="hidden sm:inline">{WARDS}</span>
           <span className="sm:hidden">7 Wards · One Family</span>
         </div>
 
-        <div className="flex justify-center mb-8 animate-scale-in">
+        <div className="flex justify-center mb-5 sm:mb-8 animate-scale-in">
           <div className="relative">
             <div className="absolute inset-0 bg-accent/40 blur-2xl rounded-full scale-110" />
-            <div className="relative h-32 w-32 sm:h-40 sm:w-40 rounded-full overflow-hidden bg-white shadow-elegant ring-4 ring-accent/60 animate-float">
+            <div className="relative h-24 w-24 sm:h-32 sm:w-32 md:h-40 md:w-40 rounded-full overflow-hidden bg-white shadow-elegant ring-4 ring-accent/60 animate-float">
               <img
                 src={logo}
                 alt="KUWESA — Kuria West Students Association logo"
@@ -69,19 +69,19 @@ export const Hero = () => {
           </div>
         </div>
 
-        <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance mb-4 animate-fade-in-up">
+        <h1 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance leading-[1.1] mb-3 sm:mb-4 animate-fade-in-up">
           Kuria West Students <br className="hidden sm:block" />
           <span className="text-accent">Association</span>
         </h1>
         <p
-          className="text-accent text-sm sm:text-base font-bold tracking-[0.4em] uppercase mb-6 animate-fade-in-up"
+          className="text-accent text-xs sm:text-base font-bold tracking-[0.35em] sm:tracking-[0.4em] uppercase mb-4 sm:mb-6 animate-fade-in-up"
           style={{ animationDelay: "0.1s" }}
         >
           KUWESA
         </p>
 
         <p
-          className="text-lg sm:text-xl md:text-2xl text-white/95 max-w-3xl mx-auto text-balance mb-10 animate-fade-in-up"
+          className="text-base sm:text-xl md:text-2xl text-white/95 max-w-3xl mx-auto text-balance mb-7 sm:mb-10 animate-fade-in-up"
           style={{ animationDelay: "0.2s" }}
         >
           Empowering Students. Building Leaders. Transforming Communities.
@@ -108,7 +108,7 @@ export const Hero = () => {
         </div>
 
         <div
-          className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto animate-fade-in-up"
+          className="mt-10 sm:mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-3xl mx-auto animate-fade-in-up"
           style={{ animationDelay: "0.4s" }}
         >
           {[
@@ -118,14 +118,14 @@ export const Hero = () => {
             { n: "1", l: "Strong Family" },
           ].map((s) => (
             <div key={s.l} className="text-center">
-              <div className="font-display text-3xl sm:text-4xl font-bold text-accent">{s.n}</div>
-              <div className="text-xs sm:text-sm text-white/80 mt-1">{s.l}</div>
+              <div className="font-display text-2xl sm:text-4xl font-bold text-accent">{s.n}</div>
+              <div className="text-[11px] sm:text-sm text-white/80 mt-1">{s.l}</div>
             </div>
           ))}
         </div>
 
         {/* Carousel dots */}
-        <div className="flex justify-center gap-2 mt-10">
+        <div className="flex justify-center gap-2 mt-8 sm:mt-10">
           {SLIDES.map((_, i) => (
             <button
               key={i}

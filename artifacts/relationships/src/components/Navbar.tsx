@@ -99,7 +99,7 @@ export const Navbar = () => {
         <div className="hidden md:flex items-center gap-2">
           <Link to="/admin">
             <Button variant="ghost" size="sm" className="gap-1.5">
-              <ShieldCheck className="h-4 w-4" /> Admin
+              <ShieldCheck className="h-4 w-4" /> Portal
             </Button>
           </Link>
           {onHome && (
