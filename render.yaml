@@ -1,0 +1,32 @@
+services:
+  # Backend API Service
+  - type: web
+    name: kuwesa-api
+    runtime: node
+    plan: free
+    buildCommand: cd artifacts/api-server && pnpm install && pnpm run build
+    startCommand: cd artifacts/api-server && pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/healthz
+
+  # Frontend Service
+  - type: web
+    name: kuwesa-frontend
+    runtime: static
+    plan: free
+    buildCommand: cd artifacts/relationships && pnpm install && pnpm run build
+    staticPublishPath: artifacts/relationships/dist/public
+    envVars:
+      - key: VITE_API_URL
+        value: https://kuwesa-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://kuwesa-api.onrender.com/api/*
+      - type: file
+        source: /**
+        destination: /index.html
