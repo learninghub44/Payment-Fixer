@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
 import cors from "cors";
@@ -57,7 +57,7 @@ export function createApp(): express.Express {
   );
 
   // Make sure schema migrations run before any request is handled.
-  app.use(async (_req, _res, next) => {
+  app.use(async (_req: Request, _res: Response, next: NextFunction) => {
     try {
       await initSchemaOnce();
     } catch {
@@ -66,7 +66,7 @@ export function createApp(): express.Express {
     next();
   });
 
-  app.get("/api/healthz", (_req, res) => {
+  app.get("/api/healthz", (_req: Request, res: Response) => {
     res.json({ ok: true, ts: new Date().toISOString() });
   });
 
