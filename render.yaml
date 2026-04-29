@@ -4,8 +4,8 @@ services:
     name: kuwesa-api
     runtime: node
     plan: free
-    buildCommand: cd artifacts/api-server && pnpm install && pnpm run build
-    startCommand: cd artifacts/api-server && pnpm run start
+    buildCommand: pnpm --filter @workspace/api-server install && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start
     envVars:
       - key: NODE_ENV
         value: production
@@ -18,7 +18,7 @@ services:
     name: kuwesa-frontend
     runtime: static
     plan: free
-    buildCommand: cd artifacts/relationships && pnpm install && pnpm run build
+    buildCommand: pnpm --filter @workspace/relationships install && pnpm --filter @workspace/relationships run build
     staticPublishPath: artifacts/relationships/dist/public
     envVars:
       - key: VITE_API_URL
