@@ -22,6 +22,10 @@ Admin login (seeded): `kuwesa23@gmail.com` / `Facebook@2025`.
 
 1. Create a Supabase project.
 2. From **Project Settings → Database → Connection string → URI**, copy the **Pooler (Transaction mode, port 6543)** connection string. Append `?sslmode=require` if not already present.
+3. From **Project Settings → API**, copy:
+   - **Project URL** (e.g. `https://xxxxx.supabase.co`)
+   - **Service role key** (under "Project API keys" — not the anon key)
+4. Go to **Storage**. A bucket called `leader-photos` will be auto-created on the first upload, but if you'd like to create it manually: **New bucket** → name `leader-photos` → **Public bucket** ON.
 
 ### 2. GitHub + Vercel
 
@@ -31,7 +35,10 @@ Admin login (seeded): `kuwesa23@gmail.com` / `Facebook@2025`.
 
 | Key | Value | Notes |
 |---|---|---|
-| `SUPABASE_DATABASE_URL` | from step 1 | required |
+| `SUPABASE_DATABASE_URL` | pooler URL from step 1.2 | required |
+| `SUPABASE_URL` | project URL from step 1.3 | required for leader photo uploads |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role key from step 1.3 | required for leader photo uploads |
+| `SUPABASE_STORAGE_BUCKET` | `leader-photos` | optional, defaults to `leader-photos` |
 | `SESSION_SECRET` | 32+ random chars | required (use `openssl rand -hex 32`) |
 | `PESAPAL_CONSUMER_KEY` | from Pesapal merchant dashboard | required |
 | `PESAPAL_CONSUMER_SECRET` | from Pesapal merchant dashboard | required |

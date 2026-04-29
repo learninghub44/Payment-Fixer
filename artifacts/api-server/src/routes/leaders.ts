@@ -4,22 +4,14 @@ import { leaders } from "../shared/schema";
 import { eq, asc } from "drizzle-orm";
 import { requireAdmin } from "../middleware/requireAdmin";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { uploadLeaderPhoto } from "../storage";
 
 const router = Router();
 
-const uploadDir = path.join(process.cwd(), "public", "uploads", "leaders");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}${ext}`);
-  },
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5_000_000 },
 });
-const upload = multer({ storage, limits: { fileSize: 5_000_000 } });
 
 router.get("/", async (_req: Request, res: Response) => {
   const rows = await db.select().from(leaders).orderBy(asc(leaders.sortOrder));
@@ -38,9 +30,18 @@ router.post("/", requireAdmin, async (req: Request, res: Response) => {
 
 router.post("/:id/photo", requireAdmin, upload.single("photo"), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  const photoUrl = `/uploads/leaders/${req.file.filename}`;
-  await db.update(leaders).set({ photoUrl }).where(eq(leaders.id, req.params.id));
-  return res.json({ photoUrl });
+  try {
+    const photoUrl = await uploadLeaderPhoto(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+    await db.update(leaders).set({ photoUrl }).where(eq(leaders.id, req.params.id));
+    return res.json({ photoUrl });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Upload failed";
+    return res.status(500).json({ error: msg });
+  }
 });
 
 router.patch("/:id/photo", requireAdmin, async (req: Request, res: Response) => {
