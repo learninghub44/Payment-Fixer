@@ -1,86 +1,99 @@
 # KUWESA — Kuria West Students Association
 
-Full-stack web application for the Kuria West Students Association (KUWESA). Member registration with Pesapal payments, welfare campaigns, announcements, leadership, and an admin dashboard.
+A members-only association portal with public marketing site, member registration, Pesapal payments (M-Pesa / Visa / Mastercard / Airtel / bank), welfare campaigns, leadership directory, announcements, and an admin dashboard.
 
-## Architecture
+## Stack
 
-pnpm monorepo. Two artifacts in active use:
+- **Frontend**: React + Vite + Tailwind v3 + react-router-dom (`artifacts/relationships`)
+- **Backend**: Express 5 + Drizzle ORM + Postgres (`artifacts/api-server`)
+- **Database**: Supabase Postgres (production), Replit Postgres (local dev fallback)
+- **Payments**: Pesapal v3 (live)
+- **Hosting**: Vercel (frontend + serverless function for the Express backend)
 
-- `artifacts/relationships` — React + Vite frontend at `/` (named `relationships` for legacy reasons; the artifact title is **KUWESA**).
-- `artifacts/api-server` — Express + drizzle-orm REST API at `/api` and static `/uploads`.
-- `artifacts/mockup-sandbox` — design template, unused by this product.
+## Local development
 
-Routing is handled by Replit's reverse proxy. The frontend calls `/api/*` and `/uploads/*` directly; the proxy forwards to the API server on port 8080.
+Workflows are configured. Press Run or restart `artifacts/api-server: API Server` and `artifacts/relationships: web`.
 
-## Tech Stack
+Admin login (seeded): `kuwesa23@gmail.com` / `Facebook@2025`.
 
-- **Frontend:** React 18, Vite, TypeScript, Tailwind v3, shadcn/ui, react-router-dom v6, @tanstack/react-query, sonner.
-- **Backend:** Express 5, drizzle-orm (node-postgres), express-session + connect-pg-simple, multer, bcryptjs, tsx (no build step in dev or prod).
-- **Database:** External Supabase Postgres via `SUPABASE_DATABASE_URL` (pooler endpoint).
-- **Payments:** Pesapal v3 (live).
+## Production deployment (Vercel + Supabase)
 
-## Data model (drizzle, mapped to existing Supabase columns)
+### 1. Supabase
 
-- `admin_users` — id, username, email, full_name, password_hash, role, status.
-- `members` — full registration fields + `status` ("Pending Payment" | "Paid" | …).
-- `announcements` — title, body (mapped to DB column `content`), createdAt.
-- `leaders` — name, role (DB `position`), phone, photoUrl (DB `image_url`), sortOrder.
-- `welfare_campaigns` — title, description, beneficiary, goal_amount, raised_amount, status, cover_image_url.
-- `payments` — Pesapal order tracking + raw_callback jsonb.
+1. Create a Supabase project.
+2. From **Project Settings → Database → Connection string → URI**, copy the **Pooler (Transaction mode, port 6543)** connection string. Append `?sslmode=require` if not already present.
 
-The Supabase schema was richer than the app's drizzle schema. We aligned by:
-1. Aliasing TS field names to actual DB column names (e.g. `body → content`, `role → position`, `photoUrl → image_url`).
-2. Non-destructive `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for missing columns (`leaders.phone`, `leaders.sort_order`, `welfare_campaigns.beneficiary`, `welfare_campaigns.cover_image_url`).
-3. Made `members.password` nullable with empty default (registration doesn't collect a password).
+### 2. GitHub + Vercel
 
-## Routes
+1. Push this repo to GitHub.
+2. On Vercel, **Add New Project** → import the repo. Vercel auto-detects `vercel.json` — no framework preset needed.
+3. In **Project → Settings → Environment Variables**, add the following (Production, Preview, Development as needed):
 
-Frontend (`react-router-dom`):
-- `/` — Marketing site (Hero, About, Programs, Leadership, Membership, Welfare, Contact).
-- `/admin` — admin login.
-- `/admin/dashboard` — admin dashboard.
-- `/payment/success`, `/payment/failed` — Pesapal callbacks.
+| Key | Value | Notes |
+|---|---|---|
+| `SUPABASE_DATABASE_URL` | from step 1 | required |
+| `SESSION_SECRET` | 32+ random chars | required (use `openssl rand -hex 32`) |
+| `PESAPAL_CONSUMER_KEY` | from Pesapal merchant dashboard | required |
+| `PESAPAL_CONSUMER_SECRET` | from Pesapal merchant dashboard | required |
+| `PESAPAL_ENV` | `live` (or `sandbox` for testing) | optional, defaults to `live` |
+| `APP_BASE_URL` | your final domain, e.g. `https://kuwesa.vercel.app` | required after first deploy |
 
-API (`/api/*`):
-- `auth/login`, `auth/logout`, `auth/me`
-- `members` (POST public, GET/PATCH/DELETE admin-only)
-- `announcements` (GET public, mutations admin-only)
-- `leaders` (GET public, mutations + photo upload admin-only)
-- `welfare` (GET public, mutations admin-only)
-- `payments/create`, `payments/ipn`, `payments/status`
-- `healthz`
+4. Click **Deploy**. The first deploy will:
+   - Build the Vite frontend → `artifacts/relationships/dist/public`
+   - Bundle the Express app as a single serverless function at `/api/*` (all routes are caught by `api/[...path].ts`)
+   - Auto-create the session table and run schema migrations on first request
+   - Auto-register the IPN URL `https://<your-domain>/api/payments/ipn` with Pesapal
 
-## Admin credentials (seeded)
-- Email: `kuwesa23@gmail.com`
-- Password: `Facebook@2025`
+5. **After the first deploy completes**, set `APP_BASE_URL` to your real production domain and redeploy. This ensures Pesapal redirects users back to *your* site after payment, not to a wrong host.
 
-(Existing Supabase admin `kuwesa12@gmail.com` is also present from a previous deployment.)
+### 3. First-run database setup
 
-## Environment / Secrets
+The schema migrations (`ensureSchema`) run automatically on the first request. To create the initial tables, you have two options:
 
-Required Replit Secrets (already set):
-- `SUPABASE_DATABASE_URL`
-- `PESAPAL_CONSUMER_KEY`, `PESAPAL_CONSUMER_SECRET`, `PESAPAL_IPN_ID`
-- `SESSION_SECRET` (Replit auto-generates)
-
-Optional:
-- `PESAPAL_ENV` — defaults to `live`.
-- `APP_BASE_URL` — defaults to the request host; useful when callbacks need an explicit URL.
-
-## Workflows
-
-- `artifacts/relationships: web` → `pnpm --filter @workspace/relationships run dev` (Vite, port 25104).
-- `artifacts/api-server: API Server` → `pnpm --filter @workspace/api-server run dev` (tsx watch, port 8080).
-- `artifacts/mockup-sandbox: Component Preview Server` — unused.
-
-## Useful commands
-
+**Option A — Run from your machine (recommended)**:
 ```bash
-pnpm --filter @workspace/api-server run db:seed     # seed admin + default leaders
-pnpm --filter @workspace/api-server run typecheck   # typecheck server
-pnpm --filter @workspace/relationships run typecheck # typecheck frontend
+SUPABASE_DATABASE_URL='postgresql://...' pnpm --filter @workspace/api-server exec drizzle-kit push --force
+SUPABASE_DATABASE_URL='postgresql://...' pnpm --filter @workspace/api-server run db:seed
 ```
 
-## Deployment notes
+**Option B — From the Supabase SQL editor**: paste the SQL from `artifacts/api-server/drizzle/` (generated by `drizzle-kit push`).
 
-Production build: the API runs via `tsx src/index.ts` (no esbuild bundle); the frontend is built statically by Vite and served from `dist/public`. Both are wired in `.replit-artifact/artifact.toml` for each artifact. Make sure all four secrets are set in the production environment before publishing.
+The seed creates the admin user `kuwesa23@gmail.com` / `Facebook@2025` and seven default leaders.
+
+### 4. Custom domain (optional)
+
+Add your domain in Vercel → Settings → Domains, then update `APP_BASE_URL` to match and redeploy.
+
+## Known limitations on Vercel
+
+- **Leader photo uploads write to disk**, which is read-only on Vercel serverless functions. Photos uploaded after deployment won't persist. To enable persistent uploads, switch `multer.diskStorage` in `routes/leaders.ts` to Supabase Storage (a small follow-up change).
+- **Free Vercel plan** has a 10-second function timeout; the Pesapal call is configured for a 30-second max which requires the Hobby Pro tier or higher. If you stay on free, drop `maxDuration` in `vercel.json`.
+
+## Project structure
+
+```
+artifacts/
+  relationships/      # React + Vite frontend (KUWESA site + admin dashboard)
+  api-server/         # Express + Drizzle backend
+    src/
+      app.ts          # Express app factory (used by both Replit dev and Vercel)
+      index.ts        # Replit dev runner (runs app.listen)
+      db.ts           # Drizzle + pg pool (uses SUPABASE_DATABASE_URL || DATABASE_URL)
+      seed.ts         # Admin user + default leaders seeder
+      shared/schema.ts # Drizzle table definitions
+      routes/         # auth, members, announcements, leaders, welfare, payments
+api/
+  [...path].ts        # Vercel serverless entry — wraps the Express app
+vercel.json           # Vercel build & function config
+```
+
+## Payment flow (Pesapal v3)
+
+1. User fills the Membership or Welfare form on the site.
+2. Frontend POSTs to `/api/payments/create` with payer details + amount.
+3. Backend authenticates with Pesapal, registers an IPN URL on first run, and submits an order.
+4. User is redirected to `redirect_url` (Pesapal hosted iframe — M-Pesa / Visa / Mastercard / Airtel / bank).
+5. After payment, Pesapal:
+   - Redirects the browser back to `${APP_BASE_URL}/payment/success?ref=<merchant_reference>`
+   - Calls the IPN endpoint `${APP_BASE_URL}/api/payments/ipn` server-to-server.
+6. The IPN handler queries Pesapal for the final status, updates the `payments` row, and (on success) marks the member `Paid` or increments the welfare campaign `raised_amount`.
