@@ -4,7 +4,7 @@ services:
     name: kuwesa-payment-api
     runtime: node
     plan: free
-    buildCommand: cd artifacts/api-server && cp package-standalone.json package.json && npm install && npm install @types/express @types/express-session @types/connect-pg-simple @types/cors @types/multer @types/node @types/pg @types/bcryptjs drizzle-kit typescript && npm run build
+    buildCommand: cd artifacts/api-server && cp package-standalone.json package.json && npm install && npm install --save-dev @types/express @types/cors @types/express-session @types/multer @types/connect-pg-simple && npm run build
     startCommand: cd artifacts/api-server && npm start
     envVars:
       - key: NODE_ENV
