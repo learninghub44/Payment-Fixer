@@ -23,13 +23,13 @@ router.patch("/:id", requireAdmin, async (req: Request, res: Response) => {
   if (!title || !body) return res.status(400).json({ error: "Title and body required" });
   const [row] = await db.update(announcements)
     .set({ title, body })
-    .where(eq(announcements.id, req.params.id))
+    .where(eq(announcements.id, String(req.params.id)))
     .returning();
   return res.json(row);
 });
 
 router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
-  await db.delete(announcements).where(eq(announcements.id, req.params.id));
+  await db.delete(announcements).where(eq(announcements.id, String(req.params.id)));
   return res.json({ ok: true });
 });
 

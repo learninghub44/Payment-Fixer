@@ -40,19 +40,19 @@ router.patch("/:id", requireAdmin, async (req: Request, res: Response) => {
       beneficiary: beneficiary || null,
       goalAmount: String(Number(goalAmount) || 0),
     })
-    .where(eq(welfareCampaigns.id, req.params.id))
+    .where(eq(welfareCampaigns.id, String(req.params.id)))
     .returning();
   return res.json(row);
 });
 
 router.patch("/:id/status", requireAdmin, async (req: Request, res: Response) => {
   const { status } = req.body;
-  await db.update(welfareCampaigns).set({ status }).where(eq(welfareCampaigns.id, req.params.id));
+  await db.update(welfareCampaigns).set({ status }).where(eq(welfareCampaigns.id, String(req.params.id)));
   return res.json({ ok: true });
 });
 
 router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
-  await db.delete(welfareCampaigns).where(eq(welfareCampaigns.id, req.params.id));
+  await db.delete(welfareCampaigns).where(eq(welfareCampaigns.id, String(req.params.id)));
   return res.json({ ok: true });
 });
 

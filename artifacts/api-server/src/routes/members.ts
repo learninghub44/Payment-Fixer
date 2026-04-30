@@ -49,13 +49,13 @@ router.patch("/:id/status", requireAdmin, async (req: Request, res: Response) =>
   const { id } = req.params;
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: "Status required" });
-  await db.update(members).set({ status }).where(eq(members.id, id));
+  await db.update(members).set({ status }).where(eq(members.id, String(id)));
   return res.json({ ok: true });
 });
 
 router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
   const { id } = req.params;
-  await db.delete(members).where(eq(members.id, id));
+  await db.delete(members).where(eq(members.id, String(id)));
   return res.json({ ok: true });
 });
 

@@ -36,7 +36,7 @@ router.post("/:id/photo", requireAdmin, upload.single("photo"), async (req: Requ
       req.file.originalname,
       req.file.mimetype
     );
-    await db.update(leaders).set({ photoUrl }).where(eq(leaders.id, req.params.id));
+    await db.update(leaders).set({ photoUrl }).where(eq(leaders.id, String(req.params.id)));
     return res.json({ photoUrl });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Upload failed";
@@ -45,7 +45,7 @@ router.post("/:id/photo", requireAdmin, upload.single("photo"), async (req: Requ
 });
 
 router.patch("/:id/photo", requireAdmin, async (req: Request, res: Response) => {
-  await db.update(leaders).set({ photoUrl: null }).where(eq(leaders.id, req.params.id));
+  await db.update(leaders).set({ photoUrl: null }).where(eq(leaders.id, String(req.params.id)));
   return res.json({ ok: true });
 });
 
@@ -56,12 +56,12 @@ router.patch("/:id", requireAdmin, async (req: Request, res: Response) => {
   if (role !== undefined) updates.role = role;
   if (phone !== undefined) updates.phone = phone || null;
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: "No fields to update" });
-  const [row] = await db.update(leaders).set(updates).where(eq(leaders.id, req.params.id)).returning();
+  const [row] = await db.update(leaders).set(updates).where(eq(leaders.id, String(req.params.id))).returning();
   return res.json(row);
 });
 
 router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
-  await db.delete(leaders).where(eq(leaders.id, req.params.id));
+  await db.delete(leaders).where(eq(leaders.id, String(req.params.id)));
   return res.json({ ok: true });
 });
 
