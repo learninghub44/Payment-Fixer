@@ -18,7 +18,7 @@ services:
     name: kuwesa-payment-frontend
     runtime: static
     plan: free
-    buildCommand: cd artifacts/relationships && npm install && npm run build
+    buildCommand: cd artifacts/relationships && cp package-standalone.json package.json && npm install --legacy-peer-deps && npx vite build --config vite.config.render.ts
     staticPublishPath: artifacts/relationships/dist/public
     envVars:
       - key: VITE_API_URL
