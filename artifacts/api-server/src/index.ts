@@ -1,7 +1,7 @@
 import { createApp } from "./app";
 
 const app = createApp();
-const PORT = Number(process.env.PORT || 8080);
+const PORT = Number(process.env.PORT || 10000);
 
 if (!process.env.VERCEL) {
   app.listen(PORT, "0.0.0.0", () => {
