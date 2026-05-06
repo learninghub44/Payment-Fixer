@@ -20,6 +20,7 @@ async function getPesapalToken() {
       consumer_key: process.env.PESAPAL_CONSUMER_KEY,
       consumer_secret: process.env.PESAPAL_CONSUMER_SECRET,
     }),
+    signal: AbortSignal.timeout(8000),
   });
   const j = (await r.json()) as any;
   if (!j.token) throw new Error(`Pesapal auth failed: ${JSON.stringify(j)}`);
@@ -48,6 +49,7 @@ async function resolveIpnId(req: Request): Promise<string> {
   try {
     const list = (await fetch(`${pesapalBaseUrl(env)}/api/URLSetup/GetIpnList`, {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
     }).then((r) => r.json())) as any;
     if (Array.isArray(list)) {
       const match = list.find(
@@ -82,6 +84,7 @@ async function resolveIpnId(req: Request): Promise<string> {
       Accept: "application/json",
     },
     body: JSON.stringify({ url: ipnUrl, ipn_notification_type: "GET" }),
+    signal: AbortSignal.timeout(8000),
   }).then((r) => r.json())) as any;
 
   if (!reg?.ipn_id) {
@@ -159,6 +162,7 @@ router.post("/create", async (req: Request, res: Response) => {
           last_name: payerName.split(" ").slice(1).join(" ") || "-",
         },
       }),
+      signal: AbortSignal.timeout(8000),
     });
 
     const orderJson = (await orderRes.json()) as any;
@@ -223,7 +227,7 @@ async function processStatus(orderTrackingId: string, merchantReference: string)
   const token = await getPesapalToken();
   const r = await fetch(
     `${pesapalBaseUrl(env)}/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`,
-    { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
+    { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) }
   );
   const statusData = (await r.json()) as any;
 
