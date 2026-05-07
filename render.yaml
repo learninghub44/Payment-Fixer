@@ -7,6 +7,8 @@ services:
     buildCommand: cd artifacts/api-server && cp package-standalone.json package.json && npm install --legacy-peer-deps && npm run build
     startCommand: cd artifacts/api-server && npm start
     envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
       - key: NODE_ENV
         value: production
       - key: PORT
