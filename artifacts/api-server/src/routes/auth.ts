@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { db } from "../db";
-import { adminUsers } from "../shared/schema";
+import { db } from "../db.js";
+import { adminUsers } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
 
 const router = Router();

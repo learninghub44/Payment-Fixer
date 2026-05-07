@@ -5,13 +5,13 @@ import ConnectPgSimple from "connect-pg-simple";
 import cors from "cors";
 import path from "path";
 import fs from "fs";
-import { pool, ensureSchema } from "./db";
-import authRouter from "./routes/auth";
-import membersRouter from "./routes/members";
-import announcementsRouter from "./routes/announcements";
-import leadersRouter from "./routes/leaders";
-import welfareRouter from "./routes/welfare";
-import paymentsRouter from "./routes/payments";
+import { pool, ensureSchema } from "./db.js";
+import authRouter from "./routes/auth.js";
+import membersRouter from "./routes/members.js";
+import announcementsRouter from "./routes/announcements.js";
+import leadersRouter from "./routes/leaders.js";
+import welfareRouter from "./routes/welfare.js";
+import paymentsRouter from "./routes/payments.js";
 
 let schemaReady: Promise<void> | null = null;
 function initSchemaOnce() {

@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
-import { db } from "../db";
-import { members } from "../shared/schema";
+import { db } from "../db.js";
+import { members } from "../shared/schema.js";
 import { eq, desc } from "drizzle-orm";
-import { requireAdmin } from "../middleware/requireAdmin";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 
 const router = Router();
 

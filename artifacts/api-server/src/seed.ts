@@ -1,7 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { db } from "./db";
-import { adminUsers, leaders } from "./shared/schema";
+import { db } from "./db.js";
+import { adminUsers, leaders } from "./shared/schema.js";
 
 async function seed() {
   console.log("Seeding KUWESA database...");

@@ -1,10 +1,10 @@
 import { Router, Request, Response } from "express";
-import { db } from "../db";
-import { leaders } from "../shared/schema";
+import { db } from "../db.js";
+import { leaders } from "../shared/schema.js";
 import { eq, asc } from "drizzle-orm";
-import { requireAdmin } from "../middleware/requireAdmin";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 import multer from "multer";
-import { uploadLeaderPhoto } from "../storage";
+import { uploadLeaderPhoto } from "../storage.js";
 
 const router = Router();
 
