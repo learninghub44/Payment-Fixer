@@ -1,5 +1,2 @@
 name = "kuwesa"
 pages_build_output_dir = "artifacts/relationships/dist/public"
-
-[build]
-command = "pnpm --filter @workspace/relationships run build"
