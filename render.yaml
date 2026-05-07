@@ -1,5 +1,4 @@
 services:
-  # Backend API Service
   - type: web
     name: kuwesa-payment-api
     runtime: node
@@ -17,21 +16,3 @@ services:
       - key: SESSION_SECRET
         sync: false
     healthCheckPath: /api/healthz
-
-  # Frontend Service
-  - type: web
-    name: kuwesa-payment-frontend
-    runtime: static
-    plan: free
-    buildCommand: cd artifacts/relationships && cp package-standalone.json package.json && npm install --legacy-peer-deps && npm run build
-    staticPublishPath: artifacts/relationships/dist/public
-    envVars:
-      - key: VITE_API_URL
-        value: https://kuwesa-payment-api.onrender.com/api
-    routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://kuwesa-payment-api.onrender.com/api/*
-      - type: file
-        source: /**
-        destination: /index.html

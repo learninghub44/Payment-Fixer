@@ -9,8 +9,7 @@
     "start": "node dist/index.js",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/seed.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "install": "pnpm install"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.0",
