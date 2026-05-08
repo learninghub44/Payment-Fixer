@@ -66,8 +66,59 @@ export function createApp(): express.Express {
     next();
   });
 
+  app.get("/", (_req: Request, res: Response) => {
+    res.json({
+      message: "KUWESA Payment API",
+      version: "1.0.0",
+      endpoints: {
+        health: "/api/healthz",
+        auth: {
+          login: "POST /api/auth/login",
+          logout: "POST /api/auth/logout",
+          me: "GET /api/auth/me"
+        },
+        members: {
+          create: "POST /api/members",
+          list: "GET /api/members (requires auth)"
+        },
+        payments: {
+          create: "POST /api/payments",
+          list: "GET /api/payments (requires auth)"
+        },
+        announcements: {
+          list: "GET /api/announcements",
+          create: "POST /api/announcements (requires auth)"
+        },
+        leaders: {
+          list: "GET /api/leaders",
+          create: "POST /api/leaders (requires auth)"
+        },
+        welfare: {
+          list: "GET /api/welfare",
+          create: "POST /api/welfare (requires auth)"
+        }
+      }
+    });
+  });
+
   app.get("/api/healthz", (_req: Request, res: Response) => {
     res.json({ ok: true, ts: new Date().toISOString() });
+  });
+
+  app.get("/api/test-db", async (_req: Request, res: Response) => {
+    try {
+      const result = await pool.query('SELECT NOW() as current_time, current_database() as database');
+      res.json({ 
+        database: "connected", 
+        time: result.rows[0].current_time,
+        database_name: result.rows[0].database
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        database: "error", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   });
 
   app.use("/api/auth", authRouter);
