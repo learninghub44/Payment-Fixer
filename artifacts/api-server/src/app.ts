@@ -107,16 +107,56 @@ export function createApp(): express.Express {
 
   app.get("/api/test-db", async (_req: Request, res: Response) => {
     try {
+      // Check if database URL is configured
+      const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+      if (!connectionString) {
+        return res.status(500).json({ 
+          database: "error", 
+          error: "No database URL configured. Set SUPABASE_DATABASE_URL or DATABASE_URL environment variable."
+        });
+      }
+      
       const result = await pool.query('SELECT NOW() as current_time, current_database() as database');
       res.json({ 
         database: "connected", 
         time: result.rows[0].current_time,
-        database_name: result.rows[0].database
+        database_name: result.rows[0].database,
+        connection_configured: true
       });
     } catch (error) {
       res.status(500).json({ 
         database: "error", 
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
+  });
+
+  app.get("/api/check-admin", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db.js");
+      const { adminUsers } = await import("./shared/schema.js");
+      const { eq } = await import("drizzle-orm");
+      
+      const admin = await db.select().from(adminUsers).where(eq(adminUsers.email, "kuwesa23@gmail.com"));
+      
+      if (admin.length > 0) {
+        res.json({ 
+          admin_exists: true, 
+          admin_email: admin[0].email,
+          message: "Admin user found in database"
+        });
+      } else {
+        res.json({ 
+          admin_exists: false, 
+          message: "Admin user not found - database seeding may have failed"
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        admin_exists: "error", 
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined
       });
     }
   });
