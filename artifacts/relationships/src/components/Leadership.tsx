@@ -19,7 +19,7 @@ const seededPhotoFor = (name: string) => {
 };
 
 const QUOTES_BY_NAME: Record<string, string> = {
-  agrey:  "When I look at Kuria West, I don't see one ward or one school — I see one family with one future. KUWESA exists so that no student walks alone, no dream dies because of school fees, and no village is forgotten. Together we will rise, and the next generation will inherit a stronger Kuria.",
+  agrey: "As the Founder President of Kuria West Student Association (KUWESA), I believe in the power of unity, education, and youth empowerment in transforming our society. KUWESA was founded to bring together students from all wards of Kuria West and create a platform for mentorship, leadership, academic growth, advocacy, and community service. Through this association, we aim to empower students, address social challenges such as GBV, FGM, and early marriages, and inspire a generation of responsible leaders committed to the progress and development of Kuria West. Together, we can build a stronger, united, and empowered community.",
   sharon: "Every girl and every boy from our seven wards deserves a real chance — not just to be admitted, but to graduate, to lead, and to come back home and lift the next child. I joined KUWESA because I believe leadership is about opening doors so wide that no student is left outside.",
 };
 const QUOTES_BY_ROLE: Record<string, string> = {
