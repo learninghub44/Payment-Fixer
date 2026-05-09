@@ -31,7 +31,7 @@ export const Footer = () => (
           <p className="text-white/65 text-sm max-w-xs leading-relaxed mb-4">Empowering Students. Building Leaders. Transforming Communities.</p>
           {/* Social proof row */}
           <div className="flex flex-wrap gap-2">
-            {["Bwirege","Bukira East","Bukira West","Tagare","Kehancha"].map((w) => (
+            {["Isebania","Nyamosense/Komosoko","Tagare","Bukira Central","Makerero"].map((w) => (
               <span key={w} className="px-2 py-0.5 rounded-full bg-white/10 text-white/70 text-[10px] font-medium">{w}</span>
             ))}
             <span className="px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold">+2 more</span>

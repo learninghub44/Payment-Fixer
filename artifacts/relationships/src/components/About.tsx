@@ -1,9 +1,19 @@
 import { Target, Heart, Compass } from "lucide-react";
 
 const pillars = [
-  { icon: Target, title: "Our Mission", text: "To unite, mentor and empower students from Kuria West so they can lead with purpose, excel academically and uplift their communities." },
-  { icon: Heart,  title: "Our Values",  text: "Integrity, unity, hard work and service. We believe every student deserves opportunities that match their potential." },
-  { icon: Compass,title: "Our Vision", text: "A connected generation of Kuria West students leading change in education, business, sports and public service." },
+  { icon: Target, title: "Our Mission", text: "To unite, mentor and empower students from Kuria West Constituency so they can lead with purpose, excel academically and uplift their communities — from junior institutions all the way to higher learning." },
+  { icon: Heart,  title: "Our Values",  text: "Integrity, unity, hard work and service. We believe every student from Kuria West deserves opportunities that match their potential, regardless of ward or background." },
+  { icon: Compass,title: "Our Vision", text: "A connected generation of Kuria West students leading change in education, business, sports and public service across all seven wards of the constituency." },
+];
+
+const WARDS = [
+  "Isebania Ward",
+  "Nyamosense/Komosoko Ward",
+  "Tagare Ward",
+  "Bukira Central/Ikerege Ward",
+  "Makerero Ward",
+  "Bukira East Ward",
+  "Masaba Ward",
 ];
 
 export const About = () => (
@@ -15,11 +25,17 @@ export const About = () => (
         <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-foreground text-balance mb-4">
           One association. <span className="text-primary">Seven wards.</span> Endless potential.
         </h2>
-        <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-          Kuria West Students Association (KUWESA) is a youth-driven movement bringing together students from all seven wards of Kuria West —
-          Bwirege, Bukira East, Bukira Central, Bukira West, Tagare, Nyamosense/Komotobo and Kehancha. We exist to mentor, build skills, create
-          opportunities and celebrate the talent rising from our region.
+        <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mb-6">
+          Kuria West Students Association (KUWESA) is a registered student-led association that unites students from all wards of Kuria West Constituency.
+          We bring together students from junior institutions to higher learning institutions with the aim of promoting unity, students' welfare, leadership,
+          mentorship, academic growth, and empowerment for the development of Kuria West.
         </p>
+        {/* Ward chips */}
+        <div className="flex flex-wrap justify-center gap-2">
+          {WARDS.map((w) => (
+            <span key={w} className="px-3 py-1 rounded-full bg-primary/8 border border-primary/20 text-primary text-xs font-medium">{w}</span>
+          ))}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">

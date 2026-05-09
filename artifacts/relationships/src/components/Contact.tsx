@@ -7,13 +7,13 @@ import { Phone, Mail, MapPin, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const locations = [
-  "Bwirege",
+  "Isebania",
   "Bukira East",
   "Bukira Central",
-  "Bukira West",
+  "Makerero",
   "Tagare",
-  "Nyamosense/Komotobo",
-  "Kehancha",
+  "Nyamosense/Komosoko",
+  "Masaba",
 ];
 
 export const Contact = () => {
