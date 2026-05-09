@@ -1,4 +1,4 @@
-const BASE = "https://kuwesa-payment-api.onrender.com/api";
+const BASE = import.meta.env.VITE_API_URL || "https://kuwesa-payment-api.onrender.com/api";
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

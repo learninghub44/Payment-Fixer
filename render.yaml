@@ -12,3 +12,14 @@ services:
       - key: PORT
         value: 10000
     healthCheckPath: /api/healthz
+
+  # Frontend Service
+  - type: web
+    name: kuwesa-payment-frontend
+    runtime: static
+    plan: free
+    buildCommand: cd artifacts/relationships && cp package-standalone.json package.json && npm install --legacy-peer-deps && npm run build
+    staticPublishPath: artifacts/relationships/dist/public
+    envVars:
+      - key: VITE_API_URL
+        value: https://kuwesa-payment-api.onrender.com/api
