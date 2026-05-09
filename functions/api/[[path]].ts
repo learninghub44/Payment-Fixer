@@ -7,7 +7,6 @@ export async function onRequest(context: any) {
   const headers = new Headers(request.headers);
   headers.delete("host");
   headers.set("x-forwarded-host", url.hostname);
-  headers.set("x-forwarded-for", request.headers.get("cf-connecting-ip") || "");
 
   try {
     const proxyReq = new Request(target, {
@@ -18,29 +17,27 @@ export async function onRequest(context: any) {
     });
 
     const res = await fetch(proxyReq);
-    const contentType = res.headers.get("content-type") || "";
 
-    // If Render returned HTML (cold start error page), return a clean JSON error
-    if (!contentType.includes("application/json") && !contentType.includes("text/plain")) {
-      const text = await res.text();
-      if (text.includes("<!DOCTYPE") || text.includes("<html")) {
-        return new Response(
-          JSON.stringify({ error: "Server is starting up, please wait a moment and try again." }),
-          { status: 503, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
-        );
-      }
+    // Read body once as text, then check and return
+    const text = await res.text();
+
+    // If Render returned HTML (cold start), return clean JSON error
+    if (text.trimStart().startsWith("<")) {
+      return new Response(
+        JSON.stringify({ error: "Server is starting up, please wait 30 seconds and try again." }),
+        { status: 503, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      );
     }
 
-    const resHeaders = new Headers(res.headers);
-    resHeaders.set("Access-Control-Allow-Origin", "*");
-    resHeaders.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    resHeaders.set("Access-Control-Allow-Headers", "Content-Type,Authorization,Cookie");
-    resHeaders.set("Access-Control-Allow-Credentials", "true");
-
-    return new Response(res.body, {
+    return new Response(text, {
       status: res.status,
-      statusText: res.statusText,
-      headers: resHeaders,
+      headers: {
+        "Content-Type": res.headers.get("content-type") || "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,Cookie",
+        "Access-Control-Allow-Credentials": "true",
+      },
     });
   } catch (err: any) {
     return new Response(
