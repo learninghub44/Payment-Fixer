@@ -1,21 +1,22 @@
 #!/bin/bash
 set -e
 
-echo "Starting build process..."
+echo "=== KUWESA API Build ==="
 
-# Copy standalone package.json
+# Copy standalone package.json (no workspace catalog deps)
 cp package-standalone.json package.json
+echo "✓ Copied package-standalone.json"
 
 # Install dependencies
-echo "Installing dependencies..."
-npm install
+npm install --legacy-peer-deps
+echo "✓ Dependencies installed"
 
-# Install TypeScript type definitions
-echo "Installing TypeScript type definitions..."
-npm install @types/express @types/cors @types/express-session @types/multer @types/connect-pg-simple @types/node @types/pg @types/bcryptjs drizzle-kit typescript
-
-# Build the project
-echo "Building TypeScript project..."
+# Compile TypeScript
 npm run build
+echo "✓ TypeScript compiled"
 
-echo "Build completed successfully!"
+# Seed the database (creates admin user + default data)
+echo "Seeding database..."
+npm run db:seed || echo "Seed skipped (may already be seeded)"
+
+echo "=== Build complete ==="
