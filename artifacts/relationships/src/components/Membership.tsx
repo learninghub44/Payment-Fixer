@@ -4,79 +4,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, CreditCard, Sparkles, Crown, Star, GraduationCap, Shield, Lock, ArrowRight } from "lucide-react";
+import { Check, CreditCard, Shield, Lock, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { createPesapalOrder, navigateToPesapal } from "@/lib/pesapal";
-import { cn } from "@/lib/utils";
 
-type Step = "tier" | "register" | "pay";
+type Step = "register" | "pay";
 
 const KENYA_COUNTIES = [
   "Migori","Kisii","Homa Bay","Nyamira","Kisumu","Narok","Nakuru",
   "Nairobi","Kiambu","Mombasa","Machakos","Kajiado","Other",
 ];
 
-type Tier = { id: "Member"|"Leader"|"Patron"; name: string; price: number; tagline: string; icon: typeof GraduationCap; perks: string[]; highlight?: boolean; badge?: string; };
-
-const TIERS: Tier[] = [
-  {
-    id: "Member", name: "Member Registration", price: 200,
-    tagline: "Every Kuria West student starts here",
-    icon: GraduationCap,
-    perks: [
-      "Official KUWESA membership card",
-      "Access to all events & meetups",
-      "WhatsApp community access",
-      "Welfare support eligibility",
-      "Mentorship programme access",
-    ],
-  },
-  {
-    id: "Leader", name: "Leader", price: 500,
-    tagline: "Step up and lead your ward or programme",
-    icon: Star, highlight: true, badge: "Most Popular",
-    perks: [
-      "Everything in Member",
-      "Recognition on leadership page",
-      "Priority access to leadership training",
-      "Vote on KUWESA programmes",
-      "Leadership forum invitations",
-    ],
-  },
-  {
-    id: "Patron", name: "Patron", price: 2000,
-    tagline: "For alumni, professionals & community sponsors",
-    icon: Crown, badge: "Premium",
-    perks: [
-      "Everything in Leader",
-      "KUWESA Patrons honour roll listing",
-      "Direct sponsorship of welfare cases",
-      "Annual patrons dinner invitation",
-      "Special recognition at all events",
-    ],
-  },
+const FEE_OPTIONS = [
+  { id: "Member",  label: "Member Registration", amount: 200,  desc: "For every Kuria West student" },
+  { id: "Leader",  label: "Leader",               amount: 500,  desc: "For ward/programme leaders" },
+  { id: "Patron",  label: "Patron",               amount: 2000, desc: "For alumni & community sponsors" },
 ];
 
 export const Membership = () => {
   const { toast } = useToast();
-  const [step, setStep] = useState<Step>("tier");
-  const [tier, setTier] = useState<Tier>(TIERS[0]);
+  const [step, setStep] = useState<Step>("register");
   const [busy, setBusy] = useState(false);
   const [memberId, setMemberId] = useState<string | null>(null);
   const [form, setForm] = useState({
-    fullName:"", phone:"", email:"", category:"",
+    fullName:"", phone:"", email:"", category:"", tier:"Member",
     institution:"", course:"", yearOfStudy:"", studentNumber:"",
     county:"", subCounty:"", dob:"", gender:"",
     nokName:"", nokPhone:"", skills:"",
   });
 
   const update = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }));
+  const selectedFee = FEE_OPTIONS.find((f) => f.id === form.tier) ?? FEE_OPTIONS[0];
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    for (const f of ["fullName","phone","category","institution","county"] as const) {
-      if (!form[f]) { toast({ title: "Missing details", description: `Please fill in ${f}.`, variant: "destructive" }); return; }
+    for (const f of ["fullName","phone","category","institution","county","tier"] as const) {
+      if (!form[f]) { toast({ title: "Missing details", description: `Please fill in all required fields.`, variant: "destructive" }); return; }
     }
     setBusy(true);
     try {
@@ -87,10 +51,11 @@ export const Membership = () => {
         studentNumber: form.studentNumber || null, county: form.county,
         subCounty: form.subCounty || null, dateOfBirth: form.dob || null,
         gender: form.gender || null, nextOfKinName: form.nokName || null,
-        nextOfKinPhone: form.nokPhone || null, skills: form.skills || null, tier: tier.id,
+        nextOfKinPhone: form.nokPhone || null, skills: form.skills || null,
+        tier: form.tier,
       });
       setMemberId(data.id);
-      toast({ title: "Registered ✓", description: `Now complete your KES ${tier.price.toLocaleString()} payment.` });
+      toast({ title: "Registered ✓", description: `Complete your KES ${selectedFee.amount.toLocaleString()} registration fee to activate your membership.` });
       setStep("pay");
     } catch (e: any) {
       toast({ title: "Registration failed", description: e?.message, variant: "destructive" });
@@ -102,9 +67,9 @@ export const Membership = () => {
     setBusy(true);
     try {
       const order = await createPesapalOrder({
-        purpose: "membership", memberId, amount: tier.price,
+        purpose: "membership", memberId, amount: selectedFee.amount,
         payerName: form.fullName, payerPhone: form.phone, payerEmail: form.email,
-        description: `KUWESA ${tier.name} – ${form.fullName}`,
+        description: `KUWESA ${selectedFee.label} Registration – ${form.fullName}`,
       });
       navigateToPesapal(order.redirect_url);
     } catch (e: any) {
@@ -117,222 +82,139 @@ export const Membership = () => {
     <section id="membership" className="section-padding bg-gradient-soft relative overflow-hidden">
       <span className="section-number">05</span>
       <div className="container-custom">
-        <div className="text-center max-w-3xl mx-auto mb-14 reveal">
+
+        {/* Header */}
+        <div className="text-center max-w-3xl mx-auto mb-12 reveal">
           <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wider uppercase mb-4">Join KUWESA</span>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-foreground text-balance mb-4">
-            Choose your <span className="text-primary">membership tier</span>
+            Association <span className="text-primary">Registration</span>
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg">
             Strictly for <span className="font-semibold text-foreground">students from Kuria West Constituency</span>.
-            Pay once, belong for life. Secure checkout via Pesapal — M-Pesa, card or bank.
+            Fill in your details and pay your registration fee once to become a KUWESA member.
           </p>
+
+          {/* Fee summary */}
+          <div className="mt-8 inline-flex flex-wrap justify-center gap-3">
+            {FEE_OPTIONS.map((f) => (
+              <div key={f.id} className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border shadow-card text-sm">
+                <span className="font-semibold text-foreground">{f.label}</span>
+                <span className="text-muted-foreground">—</span>
+                <span className="font-bold text-primary">KES {f.amount.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* ── TIER SELECTION ── */}
-        {step === "tier" && (
-          <div className="max-w-5xl mx-auto">
-            {/* Price comparison row */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-5 mb-3">
-              {TIERS.map((t) => (
-                <div key={t.id} className="text-center">
-                  <div className={cn(
-                    "text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1",
-                    t.highlight ? "text-primary" : "text-muted-foreground"
-                  )}>{t.name}</div>
-                  <div className={cn(
-                    "font-display font-extrabold text-xl sm:text-3xl",
-                    t.highlight ? "text-primary" : "text-foreground"
-                  )}>
-                    KES {t.price.toLocaleString()}
-                  </div>
+        <div className="max-w-3xl mx-auto">
+          {/* Registration form */}
+          {step === "register" && (
+            <div className="bg-card rounded-3xl shadow-card border border-border/50 overflow-hidden reveal">
+              {/* Form header */}
+              <div className="bg-gradient-hero px-8 py-6 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                  <UserPlus className="h-6 w-6 text-accent" />
                 </div>
-              ))}
-            </div>
-
-            {/* Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 reveal">
-              {TIERS.map((t, i) => {
-                const Icon = t.icon;
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => { setTier(t); setStep("register"); }}
-                    className={cn(
-                      "group relative text-left rounded-3xl border-2 transition-all duration-300 hover:-translate-y-2 focus:outline-none focus:ring-2 focus:ring-primary",
-                      t.highlight
-                        ? "bg-gradient-hero text-white border-accent shadow-elegant scale-[1.03]"
-                        : "bg-card border-border/50 hover:border-primary/50 shadow-card hover:shadow-elegant"
-                    )}
-                  >
-                    {/* Badge */}
-                    {t.badge && (
-                      <span className={cn(
-                        "absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-soft",
-                        t.highlight ? "bg-accent text-primary-deep" : "bg-primary text-white"
-                      )}>
-                        {t.highlight && <Sparkles className="h-3 w-3" />}
-                        {t.badge}
-                      </span>
-                    )}
-
-                    <div className="p-6 sm:p-7">
-                      {/* Icon + tier number */}
-                      <div className="flex items-center justify-between mb-5">
-                        <div className={cn(
-                          "inline-flex h-12 w-12 rounded-2xl items-center justify-center shadow-soft",
-                          t.highlight ? "bg-white/15 text-accent backdrop-blur-md" : "bg-gradient-primary text-white"
-                        )}>
-                          <Icon className="h-6 w-6" />
-                        </div>
-                        <span className={cn(
-                          "font-display font-black text-4xl opacity-10",
-                          t.highlight ? "text-white" : "text-primary"
-                        )}>
-                          0{i + 1}
-                        </span>
-                      </div>
-
-                      {/* Name & tagline */}
-                      <h3 className={cn("font-display text-lg sm:text-xl font-bold mb-1", t.highlight ? "text-white" : "text-foreground")}>
-                        {t.name}
-                      </h3>
-                      <p className={cn("text-xs sm:text-sm mb-5 leading-snug", t.highlight ? "text-white/75" : "text-muted-foreground")}>
-                        {t.tagline}
-                      </p>
-
-                      {/* Price */}
-                      <div className={cn("flex items-baseline gap-1 mb-6 pb-5 border-b", t.highlight ? "border-white/20" : "border-border/50")}>
-                        <span className={cn("text-sm font-semibold", t.highlight ? "text-accent" : "text-muted-foreground")}>KES</span>
-                        <span className={cn("font-display text-4xl sm:text-5xl font-extrabold leading-none", t.highlight ? "text-accent" : "text-primary")}>
-                          {t.price.toLocaleString()}
-                        </span>
-                        <span className={cn("text-xs ml-1", t.highlight ? "text-white/60" : "text-muted-foreground")}>one-time</span>
-                      </div>
-
-                      {/* Perks */}
-                      <ul className="space-y-2.5 mb-7">
-                        {t.perks.map((p) => (
-                          <li key={p} className={cn("flex items-start gap-2.5 text-sm", t.highlight ? "text-white/90" : "text-foreground/80")}>
-                            <span className={cn("flex-shrink-0 mt-0.5 h-4 w-4 rounded-full flex items-center justify-center",
-                              t.highlight ? "bg-accent/20" : "bg-primary/10"
-                            )}>
-                              <Check className={cn("h-2.5 w-2.5", t.highlight ? "text-accent" : "text-primary")} />
-                            </span>
-                            {p}
-                          </li>
-                        ))}
-                      </ul>
-
-                      {/* CTA */}
-                      <div className={cn(
-                        "w-full text-center py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-smooth",
-                        t.highlight
-                          ? "bg-accent text-primary-deep group-hover:bg-accent/90"
-                          : "bg-primary text-white group-hover:bg-primary-deep"
-                      )}>
-                        Join as {t.id} <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Trust bar */}
-            <div className="mt-8 flex flex-wrap justify-center items-center gap-4 text-xs text-muted-foreground reveal">
-              <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-primary" /> Secured by Pesapal</span>
-              <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> M-Pesa accepted</span>
-              <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> Visa &amp; Mastercard</span>
-              <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5 text-primary" /> One-time payment</span>
-            </div>
-          </div>
-        )}
-
-        {/* ── REGISTER + PAY ── */}
-        {step !== "tier" && (
-          <div className="grid lg:grid-cols-5 gap-8 max-w-5xl mx-auto">
-            {/* Sidebar */}
-            <aside className="lg:col-span-2 bg-gradient-hero rounded-3xl p-8 text-white shadow-elegant relative overflow-hidden h-fit">
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
-              <div className="relative">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold mb-5">
-                  <tier.icon className="h-3.5 w-3.5 text-accent" /> {tier.name}
+                <div>
+                  <h3 className="font-display text-xl font-bold text-white">Member Registration Form</h3>
+                  <p className="text-white/70 text-sm">Fields marked * are required</p>
                 </div>
-                <div className="text-white/60 text-xs uppercase tracking-wider">Your selected tier</div>
-                <div className="font-display text-5xl font-extrabold mt-1 mb-1">
-                  <span className="text-accent text-2xl align-top">KES </span>{tier.price.toLocaleString()}
-                </div>
-                <p className="text-white/70 text-xs mb-8">{tier.tagline}</p>
-
-                <ol className="space-y-4 mb-8">
-                  {[{ id:"register", label:"Fill in your details" },{ id:"pay", label:`Pay KES ${tier.price.toLocaleString()}` }].map((s, i) => {
-                    const order = ["register","pay"];
-                    const done = order.indexOf(s.id) < order.indexOf(step);
-                    const active = s.id === step;
-                    return (
-                      <li key={s.id} className="flex items-center gap-3">
-                        <div className={cn("flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold",
-                          done ? "bg-accent text-primary-deep" : active ? "bg-white text-primary" : "bg-white/20 text-white/50"
-                        )}>
-                          {done ? <Check className="h-4 w-4" /> : i + 1}
-                        </div>
-                        <span className={cn("text-sm", active ? "font-semibold text-white" : done ? "text-white/70 line-through" : "text-white/50")}>{s.label}</span>
-                      </li>
-                    );
-                  })}
-                </ol>
-
-                <button onClick={() => setStep("tier")} className="text-xs text-white/60 hover:text-accent transition-smooth underline-offset-4 hover:underline">
-                  ← Change tier
-                </button>
               </div>
-            </aside>
 
-            {/* Form / Pay panel */}
-            <div className="lg:col-span-3 bg-card rounded-3xl p-6 sm:p-8 shadow-card border border-border/50">
-              {step === "register" && (
-                <form onSubmit={handleRegister} className="space-y-5 animate-fade-in">
-                  <div>
-                    <h3 className="font-display text-2xl font-bold text-foreground">Registration</h3>
-                    <p className="text-muted-foreground text-sm mt-1">Fields marked * are required.</p>
+              <form onSubmit={handleRegister} className="p-6 sm:p-8 space-y-8">
+
+                {/* Registration fee */}
+                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5">
+                  <h4 className="font-semibold text-foreground text-sm mb-3 flex items-center gap-2">
+                    <span className="h-5 w-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">1</span>
+                    Registration Fee *
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {FEE_OPTIONS.map((f) => (
+                      <label key={f.id}
+                        className={`flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          form.tier === f.id
+                            ? "border-primary bg-primary/10 shadow-soft"
+                            : "border-border bg-card hover:border-primary/40"
+                        }`}
+                      >
+                        <input type="radio" name="tier" value={f.id} checked={form.tier === f.id}
+                          onChange={() => update("tier", f.id)} className="sr-only" />
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-foreground text-sm">{f.label}</span>
+                          {form.tier === f.id && <Check className="h-4 w-4 text-primary" />}
+                        </div>
+                        <span className="font-display text-2xl font-extrabold text-primary">KES {f.amount.toLocaleString()}</span>
+                        <span className="text-muted-foreground text-xs mt-1">{f.desc}</span>
+                      </label>
+                    ))}
                   </div>
+                </div>
+
+                {/* Personal info */}
+                <div>
+                  <h4 className="font-semibold text-foreground text-sm mb-4 flex items-center gap-2">
+                    <span className="h-5 w-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">2</span>
+                    Personal Information
+                  </h4>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="fullName">Full Name *</Label>
-                      <Input id="fullName" value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
+                      <Input id="fullName" placeholder="As on your ID/admission letter" value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone *</Label>
+                      <Label htmlFor="phone">Phone Number *</Label>
                       <Input id="phone" type="tel" placeholder="07XX XXX XXX" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} />
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input id="email" type="email" placeholder="Optional" value={form.email} onChange={(e) => update("email", e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dob">Date of Birth</Label>
+                      <Input id="dob" type="date" value={form.dob} onChange={(e) => update("dob", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gender">Gender</Label>
+                      <Select value={form.gender} onValueChange={(v) => update("gender", v)}>
+                        <SelectTrigger id="gender"><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Academic info */}
+                <div>
+                  <h4 className="font-semibold text-foreground text-sm mb-4 flex items-center gap-2">
+                    <span className="h-5 w-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">3</span>
+                    Academic Information
+                  </h4>
+                  <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="category">Category *</Label>
+                      <Label htmlFor="category">Membership Category *</Label>
                       <Select value={form.category} onValueChange={(v) => update("category", v)}>
                         <SelectTrigger id="category"><SelectValue placeholder="Select your category" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="University Student">University Student</SelectItem>
                           <SelectItem value="College/TVET Student">College/TVET Student</SelectItem>
                           <SelectItem value="Postgraduate">Postgraduate</SelectItem>
-                          <SelectItem value="Form Four Leaver">Form Four Leaver</SelectItem>
+                          <SelectItem value="Form Four Leaver">Form Four Leaver (Joining College)</SelectItem>
                           <SelectItem value="Alumni">Alumni</SelectItem>
                           <SelectItem value="Community Sponsor">Community Sponsor</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    <div className="sm:col-span-2 pt-2 border-t border-border/50">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Academic Info</p>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="institution">Institution *</Label>
                       <Input id="institution" placeholder="e.g. University of Nairobi" value={form.institution} onChange={(e) => update("institution", e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="course">Course</Label>
+                      <Label htmlFor="course">Course / Programme</Label>
                       <Input id="course" placeholder="e.g. BSc Computer Science" value={form.course} onChange={(e) => update("course", e.target.value)} />
                     </div>
                     <div className="space-y-2">
@@ -350,10 +232,16 @@ export const Membership = () => {
                       <Label htmlFor="studentNumber">Student / Admission Number</Label>
                       <Input id="studentNumber" value={form.studentNumber} onChange={(e) => update("studentNumber", e.target.value)} />
                     </div>
+                  </div>
+                </div>
 
-                    <div className="sm:col-span-2 pt-2 border-t border-border/50">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Origin</p>
-                    </div>
+                {/* Origin */}
+                <div>
+                  <h4 className="font-semibold text-foreground text-sm mb-4 flex items-center gap-2">
+                    <span className="h-5 w-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">4</span>
+                    Area of Origin
+                  </h4>
+                  <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="county">County *</Label>
                       <Select value={form.county} onValueChange={(v) => update("county", v)}>
@@ -364,106 +252,103 @@ export const Membership = () => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="subCounty">Sub-County / Ward</Label>
-                      <Input id="subCounty" placeholder="e.g. Bukira East" value={form.subCounty} onChange={(e) => update("subCounty", e.target.value)} />
-                    </div>
-
-                    <div className="sm:col-span-2 pt-2 border-t border-border/50">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personal</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dob">Date of Birth</Label>
-                      <Input id="dob" type="date" value={form.dob} onChange={(e) => update("dob", e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gender">Gender</Label>
-                      <Select value={form.gender} onValueChange={(v) => update("gender", v)}>
-                        <SelectTrigger id="gender"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <Label htmlFor="subCounty">Ward (in Kuria West)</Label>
+                      <Select value={form.subCounty} onValueChange={(v) => update("subCounty", v)}>
+                        <SelectTrigger id="subCounty"><SelectValue placeholder="Select ward" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Male">Male</SelectItem>
-                          <SelectItem value="Female">Female</SelectItem>
-                          <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                          {["Isebania","Nyamosense/Komosoko","Tagare","Bukira Central/Ikerege","Makerero","Bukira East","Masaba"].map((w) => (
+                            <SelectItem key={w} value={w}>{w}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                </div>
 
-                    <div className="sm:col-span-2 pt-2 border-t border-border/50">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Next of Kin</p>
-                    </div>
+                {/* Next of kin & skills */}
+                <div>
+                  <h4 className="font-semibold text-foreground text-sm mb-4 flex items-center gap-2">
+                    <span className="h-5 w-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">5</span>
+                    Next of Kin &amp; Skills
+                  </h4>
+                  <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nokName">Name</Label>
+                      <Label htmlFor="nokName">Next of Kin Name</Label>
                       <Input id="nokName" value={form.nokName} onChange={(e) => update("nokName", e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nokPhone">Phone</Label>
+                      <Label htmlFor="nokPhone">Next of Kin Phone</Label>
                       <Input id="nokPhone" type="tel" value={form.nokPhone} onChange={(e) => update("nokPhone", e.target.value)} />
                     </div>
-                    <div className="space-y-2 sm:col-span-2 pt-2 border-t border-border/50">
+                    <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="skills">Skills / Talents</Label>
-                      <Textarea id="skills" rows={3} placeholder="e.g. Public speaking, music, programming…" value={form.skills} onChange={(e) => update("skills", e.target.value)} />
+                      <Textarea id="skills" rows={2} placeholder="e.g. Public speaking, music, programming, sports…" value={form.skills} onChange={(e) => update("skills", e.target.value)} />
                     </div>
                   </div>
-                  <Button type="submit" variant="hero" size="lg" className="w-full mt-2" disabled={busy}>
-                    {busy ? "Registering..." : "Continue to Payment →"}
-                  </Button>
-                </form>
-              )}
-
-              {step === "pay" && (
-                <div className="animate-fade-in space-y-6">
-                  <div>
-                    <h3 className="font-display text-2xl font-bold text-foreground">Complete Payment</h3>
-                    <p className="text-muted-foreground text-sm mt-1">You're one step away from joining KUWESA.</p>
-                  </div>
-
-                  {/* Checkout card */}
-                  <div className="rounded-2xl bg-gradient-to-br from-primary-deep via-primary to-primary-deep p-6 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-2xl" />
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="text-white/60 text-[11px] uppercase tracking-widest">KUWESA · Secure Checkout</div>
-                          <div className="font-display text-xl font-bold mt-0.5">{tier.name}</div>
-                        </div>
-                        <CreditCard className="h-6 w-6 text-accent opacity-80" />
-                      </div>
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <div className="text-white/50 text-xs mb-0.5">Total amount</div>
-                          <div className="font-display text-4xl font-extrabold">
-                            <span className="text-accent text-xl align-top mr-1">KES</span>{tier.price.toLocaleString()}
-                          </div>
-                        </div>
-                        <div className="text-right text-xs text-white/60">
-                          <div className="font-medium text-white">{form.fullName}</div>
-                          <div>{form.phone}</div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-white/10">
-                        {["M-PESA","Airtel Money","Visa","Mastercard","Bank"].map((m) => (
-                          <span key={m} className="px-2 py-0.5 rounded bg-white/10 text-white/80 text-[10px] font-medium">{m}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary rounded-xl p-3">
-                    <Shield className="h-4 w-4 text-primary flex-shrink-0" />
-                    Secured by Pesapal. We never see or store your PIN or card details.
-                  </div>
-
-                  <Button onClick={handlePay} variant="hero" size="lg" className="w-full" disabled={busy}>
-                    <Lock className="h-4 w-4" />
-                    {busy ? "Redirecting to Pesapal..." : `Pay KES ${tier.price.toLocaleString()} now`}
-                  </Button>
-                  <button onClick={() => setStep("register")} className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-smooth">
-                    ← Edit my details
-                  </button>
                 </div>
-              )}
+
+                <Button type="submit" variant="hero" size="lg" className="w-full" disabled={busy}>
+                  {busy ? "Submitting..." : `Register & Proceed to Pay KES ${selectedFee.amount.toLocaleString()}`}
+                </Button>
+              </form>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Payment step */}
+          {step === "pay" && (
+            <div className="bg-card rounded-3xl shadow-card border border-border/50 p-6 sm:p-8 space-y-6 animate-fade-in reveal">
+              <div>
+                <h3 className="font-display text-2xl font-bold text-foreground">Complete Registration Fee</h3>
+                <p className="text-muted-foreground text-sm mt-1">You're one step away from becoming a KUWESA member.</p>
+              </div>
+
+              {/* Summary */}
+              <div className="rounded-2xl bg-gradient-to-br from-primary-deep via-primary to-primary-deep p-6 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-2xl" />
+                <div className="relative">
+                  <div className="text-white/60 text-[11px] uppercase tracking-widest mb-3">KUWESA · Secure Checkout</div>
+                  <div className="flex items-end justify-between mb-4">
+                    <div>
+                      <div className="text-white/60 text-xs">Registration Type</div>
+                      <div className="font-display text-xl font-bold">{selectedFee.label}</div>
+                    </div>
+                    <CreditCard className="h-6 w-6 text-accent opacity-80" />
+                  </div>
+                  <div className="flex items-end justify-between pb-4 border-b border-white/15">
+                    <div>
+                      <div className="text-white/50 text-xs mb-0.5">Registration Fee</div>
+                      <div className="font-display text-4xl font-extrabold">
+                        <span className="text-accent text-xl align-top mr-1">KES</span>{selectedFee.amount.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-white/60">
+                      <div className="font-medium text-white">{form.fullName}</div>
+                      <div>{form.phone}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-4">
+                    {["M-PESA","Airtel Money","Visa","Mastercard","Bank"].map((m) => (
+                      <span key={m} className="px-2 py-0.5 rounded bg-white/10 text-white/80 text-[10px] font-medium">{m}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary rounded-xl p-3">
+                <Shield className="h-4 w-4 text-primary flex-shrink-0" />
+                Secured by Pesapal. We never see or store your PIN or card details.
+              </div>
+
+              <Button onClick={handlePay} variant="hero" size="lg" className="w-full" disabled={busy}>
+                <Lock className="h-4 w-4" />
+                {busy ? "Redirecting to Pesapal..." : `Pay KES ${selectedFee.amount.toLocaleString()} now`}
+              </Button>
+              <button onClick={() => setStep("register")} className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-smooth">
+                ← Go back and edit my details
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
