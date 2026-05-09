@@ -7,6 +7,17 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  const contentType = res.headers.get("content-type") || "";
+
+  // Handle non-JSON responses (e.g. Render cold-start HTML page)
+  if (!contentType.includes("application/json")) {
+    if (res.status === 503 || res.status === 502) {
+      throw new Error("The server is starting up. Please wait 30 seconds and try again.");
+    }
+    throw new Error(`Unexpected response (${res.status}). The server may be starting up — please try again.`);
+  }
+
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Request failed");
   return data as T;

@@ -536,7 +536,7 @@ const AdminDashboard = () => {
                     KUWESA at a glance
                   </h2>
                   <p className="text-white/80 text-sm mt-1 max-w-2xl">
-                    Your association is growing across all 7 wards. Use the sidebar to manage members, payments, welfare cases, leaders and announcements.
+                    Your association is growing across all 7 wards of Kuria West Constituency. Use the sidebar to manage members, payments, welfare cases, leaders and announcements.
                   </p>
                 </div>
               </div>

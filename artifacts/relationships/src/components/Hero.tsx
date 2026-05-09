@@ -7,10 +7,10 @@ import s2 from "@/assets/students-2.png";
 import s3 from "@/assets/students-3.png";
 
 const SLIDES = [s1, s2, s3];
-const WARDS = "Bwirege · Bukira East · Bukira Central · Bukira West · Tagare · Nyamosense/Komotobo · Kehancha";
+const WARDS = "Isebania · Nyamosense/Komosoko · Tagare · Bukira Central/Ikerege · Makerero · Bukira East · Masaba";
 
 const STATS = [
-  { n: 7,   suffix: "",  label: "Wards United", icon: MapPin },
+  { n: 7,   suffix: "",  label: "Wards", icon: MapPin },
   { n: 5,   suffix: "",  label: "Programs",      icon: BookOpen },
   { n: 200, suffix: "+", label: "Students",      icon: Users },
   { n: 1,   suffix: "",  label: "Strong Family", icon: Star },
@@ -113,7 +113,7 @@ export const Hero = () => {
         <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-accent/40 text-white text-[11px] sm:text-xs font-medium mb-5 sm:mb-8 animate-fade-in badge-pulse">
           <Sparkles className="h-3.5 w-3.5 text-accent flex-shrink-0" />
           <span className="hidden sm:inline">{WARDS}</span>
-          <span className="sm:hidden">7 Wards · One Family</span>
+          <span className="sm:hidden">7 Wards · One Constituency</span>
         </div>
 
         <div className="flex justify-center mb-5 sm:mb-8 animate-scale-in">

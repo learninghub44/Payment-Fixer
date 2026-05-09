@@ -3,18 +3,12 @@ services:
     name: kuwesa-payment-api
     runtime: node
     plan: free
-    nodeVersion: 20.18.0
-    buildCommand: "cd artifacts/api-server && cp package-standalone.json package.json && npm install --legacy-peer-deps && npm run build && npm run db:seed"
-    startCommand: "cd artifacts/api-server && npm start"
+    rootDir: artifacts/api-server
+    buildCommand: bash build.sh
+    startCommand: node dist/index.js
     envVars:
-      - key: NODE_VERSION
-        value: 20.18.0
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: SUPABASE_DATABASE_URL
-        sync: false
-      - key: SESSION_SECRET
-        sync: false
     healthCheckPath: /api/healthz
