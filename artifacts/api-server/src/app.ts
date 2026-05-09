@@ -105,6 +105,14 @@ export function createApp(): express.Express {
     res.json({ ok: true, ts: new Date().toISOString() });
   });
 
+  app.get("/api/wake-up", (_req: Request, res: Response) => {
+    res.json({ 
+      message: "Server is awake!", 
+      ts: new Date().toISOString(),
+      status: "ready"
+    });
+  });
+
   app.get("/api/test-db", async (_req: Request, res: Response) => {
     try {
       // Check if database URL is configured
