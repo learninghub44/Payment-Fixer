@@ -15,5 +15,4 @@ echo "✓ TypeScript compiled"
 # npm run db:seed
 # echo "✓ Database seeded"
 echo "⚠ Database seeding skipped - will be done manually"
-
 echo "=== Build complete ==="
