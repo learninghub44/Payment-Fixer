@@ -169,6 +169,27 @@ export function createApp(): express.Express {
     }
   });
 
+  app.get("/api/check-tables", async (_req: Request, res: Response) => {
+    try {
+      const result = await pool.query(`
+        SELECT table_name, table_type 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        ORDER BY table_name
+      `);
+      
+      res.json({
+        tables: result.rows,
+        message: "Database tables check"
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
+  });
+
   app.use("/api/auth", authRouter);
   app.use("/api/members", membersRouter);
   app.use("/api/announcements", announcementsRouter);
