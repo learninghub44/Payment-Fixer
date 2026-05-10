@@ -8,25 +8,35 @@ async function seed() {
   console.log("Seeding KUWESA database...");
 
   // Ensure schema is up to date before seeding
-  await ensureSchema();
-  console.log("✓ Schema ensured");
+  try {
+    await ensureSchema();
+    console.log("✓ Schema ensured");
+  } catch (error) {
+    console.error("❌ Schema migration failed:", error);
+    throw error;
+  }
 
   const email = "kuwesa23@gmail.com";
   const password = "Facebook@2025";
   const hash = await bcrypt.hash(password, 12);
 
-  await db
-    .insert(adminUsers)
-    .values({
-      email,
-      username: "kuwesa23",
-      fullName: "KUWESA Admin",
-      passwordHash: hash,
-      role: "admin",
-      status: "active",
-    })
-    .onConflictDoNothing();
-  console.log(`Admin ensured: ${email} / ${password}`);
+  try {
+    await db
+      .insert(adminUsers)
+      .values({
+        email,
+        username: "kuwesa23",
+        fullName: "KUWESA Admin",
+        passwordHash: hash,
+        role: "admin",
+        status: "active",
+      })
+      .onConflictDoNothing();
+    console.log(`✓ Admin ensured: ${email} / ${password}`);
+  } catch (error) {
+    console.error("❌ Admin seeding failed:", error);
+    throw error;
+  }
 
   const existing = await db.select().from(leaders);
   if (existing.length === 0) {
