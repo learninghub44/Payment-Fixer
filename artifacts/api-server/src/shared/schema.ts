@@ -55,6 +55,7 @@ export const leaders = pgTable("leaders", {
   phone: text("phone"),
   photoUrl: text("image_url"),
   sortOrder: integer("sort_order").default(0),
+  quote: text("quote"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
