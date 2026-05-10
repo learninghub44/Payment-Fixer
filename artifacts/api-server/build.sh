@@ -12,7 +12,6 @@ echo "✓ Dependencies installed"
 npm run build
 echo "✓ TypeScript compiled"
 
-# npm run db:seed
-# echo "✓ Database seeded"
-echo "⚠ Database seeding skipped - will be done manually"
+npm run db:seed
+echo "✓ Database seeded"
 echo "=== Build complete ==="
