@@ -2,6 +2,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./shared/schema.js";
 
+// Allow self-signed certificates from Supabase pooler
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const { Pool } = pg;
 
 const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
@@ -10,11 +13,7 @@ if (!connectionString) {
   throw new Error("No database URL found. Set SUPABASE_DATABASE_URL or DATABASE_URL.");
 }
 
-export const pool = new Pool({
-  connectionString,
-  ssl: { rejectUnauthorized: false, checkServerIdentity: () => undefined },
-});
-
+export const pool = new Pool({ connectionString });
 export const db = drizzle(pool, { schema });
 
 // Create all tables if they don't exist, then run ALTER migrations.
@@ -105,7 +104,6 @@ export async function ensureSchema() {
     try { await pool.query(s); } catch (e: any) { console.error("Create table error:", e.message); }
   }
 
-  // Safe ALTER migrations
   const alters = [
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS tier text DEFAULT 'Member'`,
     `ALTER TABLE leaders ADD COLUMN IF NOT EXISTS phone text`,
