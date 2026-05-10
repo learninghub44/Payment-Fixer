@@ -2,9 +2,14 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { db } from "./db.js";
 import { adminUsers, leaders } from "./shared/schema.js";
+import { ensureSchema } from "./db.js";
 
 async function seed() {
   console.log("Seeding KUWESA database...");
+
+  // Ensure schema is up to date before seeding
+  await ensureSchema();
+  console.log("✓ Schema ensured");
 
   const email = "kuwesa23@gmail.com";
   const password = "Facebook@2025";
