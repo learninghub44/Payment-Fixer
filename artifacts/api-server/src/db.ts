@@ -12,25 +12,110 @@ if (!connectionString) {
 
 export const pool = new Pool({
   connectionString,
-  ssl: process.env.SUPABASE_DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  ssl: { rejectUnauthorized: false },
 });
+
 export const db = drizzle(pool, { schema });
 
-// Idempotent schema migrations — safe to run on every boot.
+// Create all tables if they don't exist, then run ALTER migrations.
 export async function ensureSchema() {
-  const stmts = [
+  const creates = [
+    `CREATE TABLE IF NOT EXISTS admin_users (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      username text NOT NULL,
+      email text NOT NULL UNIQUE,
+      full_name text NOT NULL,
+      password_hash text NOT NULL,
+      role text DEFAULT 'admin',
+      status text DEFAULT 'active',
+      created_at timestamp DEFAULT now()
+    )`,
+    `CREATE TABLE IF NOT EXISTS user_roles (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      role text NOT NULL DEFAULT 'admin'
+    )`,
+    `CREATE TABLE IF NOT EXISTS members (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      full_name text NOT NULL,
+      phone text NOT NULL,
+      email text,
+      category text NOT NULL,
+      institution text,
+      course text,
+      year_of_study text,
+      student_number text,
+      county text,
+      sub_county text,
+      date_of_birth date,
+      gender text,
+      next_of_kin_name text,
+      next_of_kin_phone text,
+      skills text,
+      tier text DEFAULT 'Member',
+      status text NOT NULL DEFAULT 'Pending Payment',
+      joined_at timestamp DEFAULT now()
+    )`,
+    `CREATE TABLE IF NOT EXISTS announcements (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      title text NOT NULL,
+      content text NOT NULL,
+      created_at timestamp DEFAULT now()
+    )`,
+    `CREATE TABLE IF NOT EXISTS leaders (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      name text NOT NULL,
+      position text NOT NULL,
+      phone text,
+      image_url text,
+      sort_order integer DEFAULT 0,
+      created_at timestamp DEFAULT now()
+    )`,
+    `CREATE TABLE IF NOT EXISTS welfare_campaigns (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      title text NOT NULL,
+      description text NOT NULL,
+      beneficiary text,
+      goal_amount numeric NOT NULL DEFAULT 0,
+      raised_amount numeric NOT NULL DEFAULT 0,
+      status text NOT NULL DEFAULT 'active',
+      cover_image_url text,
+      created_at timestamp DEFAULT now()
+    )`,
+    `CREATE TABLE IF NOT EXISTS payments (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      purpose text NOT NULL,
+      member_id uuid REFERENCES members(id) ON DELETE SET NULL,
+      campaign_id uuid REFERENCES welfare_campaigns(id) ON DELETE SET NULL,
+      payer_name text NOT NULL,
+      payer_phone text NOT NULL,
+      payer_email text,
+      amount numeric NOT NULL,
+      currency text DEFAULT 'KES',
+      status text NOT NULL DEFAULT 'PENDING',
+      pesapal_order_id text,
+      pesapal_tracking_id text,
+      merchant_reference text UNIQUE,
+      description text,
+      created_at timestamp DEFAULT now(),
+      updated_at timestamp DEFAULT now()
+    )`,
+  ];
+
+  for (const s of creates) {
+    try { await pool.query(s); } catch (e: any) { console.error("Create table error:", e.message); }
+  }
+
+  // Safe ALTER migrations
+  const alters = [
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS tier text DEFAULT 'Member'`,
     `ALTER TABLE leaders ADD COLUMN IF NOT EXISTS phone text`,
     `ALTER TABLE leaders ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0`,
     `ALTER TABLE welfare_campaigns ADD COLUMN IF NOT EXISTS beneficiary text`,
     `ALTER TABLE welfare_campaigns ADD COLUMN IF NOT EXISTS cover_image_url text`,
-    `ALTER TABLE members ALTER COLUMN password DROP NOT NULL`,
   ];
-  for (const s of stmts) {
-    try {
-      await pool.query(s);
-    } catch {
-      // ignore — column may not exist or already nullable
-    }
+  for (const s of alters) {
+    try { await pool.query(s); } catch { /* already exists */ }
   }
+
+  console.log("Schema ensured.");
 }
