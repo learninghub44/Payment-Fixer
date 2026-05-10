@@ -26,8 +26,20 @@ async function seed() {
   const existing = await db.select().from(leaders);
   if (existing.length === 0) {
     await db.insert(leaders).values([
-      { name: "AGREY CHACHA", role: "President", phone: "+254745523865", sortOrder: 1 },
-      { name: "SHARON ATIEGO", role: "Vice President", phone: null, sortOrder: 2 },
+      { 
+        name: "AGREY CHACHA", 
+        role: "President", 
+        phone: "+254745523865", 
+        sortOrder: 1,
+        quote: "Leadership is not about being in charge. It's about taking care of those in your charge."
+      },
+      { 
+        name: "SHARON OTAIGO", 
+        role: "Vice President", 
+        phone: "+254748207838", 
+        sortOrder: 2,
+        quote: "Empowered women empower the community. Together we build stronger futures."
+      },
     ]);
     console.log("Default leaders seeded.");
   } else {
