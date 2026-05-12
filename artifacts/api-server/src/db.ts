@@ -77,15 +77,15 @@ export async function ensureSchema() {
     )`,
     `CREATE TABLE IF NOT EXISTS payments (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      purpose text NOT NULL,
-      member_id uuid REFERENCES members(id) ON DELETE SET NULL,
-      campaign_id uuid REFERENCES welfare_campaigns(id) ON DELETE SET NULL,
-      payer_name text NOT NULL,
-      payer_phone text NOT NULL,
+      purpose text NOT NULL DEFAULT 'membership',
+      member_id uuid,
+      campaign_id uuid,
+      payer_name text NOT NULL DEFAULT '',
+      payer_phone text NOT NULL DEFAULT '',
       payer_email text,
-      amount numeric NOT NULL,
-      currency text DEFAULT 'KES',
-      merchant_reference text UNIQUE,
+      amount numeric NOT NULL DEFAULT 0,
+      currency text NOT NULL DEFAULT 'KES',
+      merchant_reference text,
       pesapal_tracking_id text,
       pesapal_redirect_url text,
       status text NOT NULL DEFAULT 'PENDING',
@@ -98,6 +98,40 @@ export async function ensureSchema() {
   for (const s of creates) {
     try { await pool.query(s); } catch (e: any) { console.error("Create table error:", e.message); }
   }
+
+  // Recreate payments table with correct schema if columns are missing
+  try {
+    const cols = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'payments' AND table_schema = 'public'
+    `);
+    const colNames = cols.rows.map((r: any) => r.column_name);
+    const needed = ['merchant_reference','pesapal_redirect_url','raw_callback','payer_name','payer_phone','currency','status'];
+    const missing = needed.filter(c => !colNames.includes(c));
+    if (missing.length > 0) {
+      console.log("Payments table missing columns:", missing, "— recreating...");
+      await pool.query(`DROP TABLE IF EXISTS payments CASCADE`);
+      await pool.query(`CREATE TABLE payments (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        purpose text NOT NULL DEFAULT 'membership',
+        member_id uuid,
+        campaign_id uuid,
+        payer_name text NOT NULL DEFAULT '',
+        payer_phone text NOT NULL DEFAULT '',
+        payer_email text,
+        amount numeric NOT NULL DEFAULT 0,
+        currency text NOT NULL DEFAULT 'KES',
+        merchant_reference text UNIQUE,
+        pesapal_tracking_id text,
+        pesapal_redirect_url text,
+        status text NOT NULL DEFAULT 'PENDING',
+        raw_callback jsonb,
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      )`);
+      console.log("✓ Payments table recreated with correct schema.");
+    }
+  } catch(e: any) { console.error("Payments migration error:", e.message); }
 
   // Safe migrations for any missing columns
   const alters = [
