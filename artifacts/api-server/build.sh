@@ -12,6 +12,4 @@ echo "✓ Dependencies installed"
 npm run build
 echo "✓ TypeScript compiled"
 
-npm run db:seed
-echo "✓ Database seeded"
 echo "=== Build complete ==="

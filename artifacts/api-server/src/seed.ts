@@ -7,65 +7,33 @@ import { ensureSchema } from "./db.js";
 async function seed() {
   console.log("Seeding KUWESA database...");
 
-  // Ensure schema is up to date before seeding
-  try {
-    await ensureSchema();
-    console.log("✓ Schema ensured");
-  } catch (error) {
-    console.error("❌ Schema migration failed:", error);
-    throw error;
-  }
+  await ensureSchema();
+  console.log("✓ Schema ensured");
 
-  const email = "kuwesa23@gmail.com";
-  const password = "Facebook@2025";
-  const hash = await bcrypt.hash(password, 12);
-
-  try {
-    await db
-      .insert(adminUsers)
-      .values({
-        email,
-        username: "kuwesa23",
-        fullName: "KUWESA Admin",
-        passwordHash: hash,
-        role: "admin",
-        status: "active",
-      })
-      .onConflictDoNothing();
-    console.log(`✓ Admin ensured: ${email} / ${password}`);
-  } catch (error) {
-    console.error("❌ Admin seeding failed:", error);
-    throw error;
-  }
+  const hash = await bcrypt.hash("Facebook@2025", 12);
+  await db.insert(adminUsers).values({
+    email: "kuwesa23@gmail.com",
+    username: "kuwesa23",
+    fullName: "KUWESA Admin",
+    passwordHash: hash,
+    role: "admin",
+    status: "active",
+  }).onConflictDoNothing();
+  console.log("✓ Admin ensured: kuwesa23@gmail.com / Facebook@2025");
 
   const existing = await db.select().from(leaders);
   if (existing.length === 0) {
     await db.insert(leaders).values([
-      { 
-        name: "AGREY CHACHA", 
-        role: "President", 
-        phone: "+254745523865", 
-        sortOrder: 1,
-        quote: "Leadership is not about being in charge. It's about taking care of those in your charge."
-      },
-      { 
-        name: "SHARON OTAIGO", 
-        role: "Vice President", 
-        phone: "+254748207838", 
-        sortOrder: 2,
-        quote: "Empowered women empower the community. Together we build stronger futures."
-      },
+      { name: "AGREY CHACHA",  role: "Founder President", phone: "+254745523865", sortOrder: 1 },
+      { name: "SHARON OTAIGO", role: "Vice President",     phone: "+254748207838", sortOrder: 2 },
     ]);
-    console.log("Default leaders seeded.");
+    console.log("✓ Leaders seeded.");
   } else {
-    console.log(`Leaders table already has ${existing.length} rows; skipping.`);
+    console.log(`✓ Leaders already exist (${existing.length}) — skipping.`);
   }
 
   console.log("Done.");
   process.exit(0);
 }
 
-seed().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+seed().catch((e) => { console.error(e); process.exit(1); });
