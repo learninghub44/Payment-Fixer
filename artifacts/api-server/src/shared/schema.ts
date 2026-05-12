@@ -80,7 +80,7 @@ export const payments = pgTable("payments", {
   payerEmail: text("payer_email"),
   amount: numeric("amount").notNull(),
   currency: text("currency").notNull().default("KES"),
-  merchantReference: text("merchant_reference").notNull().unique(),
+  merchantReference: text("merchant_reference").unique(),
   pesapalTrackingId: text("pesapal_tracking_id"),
   pesapalRedirectUrl: text("pesapal_redirect_url"),
   status: text("status").notNull().default("PENDING"),
