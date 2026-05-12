@@ -107,13 +107,22 @@ export async function ensureSchema() {
     `ALTER TABLE leaders ADD COLUMN IF NOT EXISTS image_url text`,
     `ALTER TABLE welfare_campaigns ADD COLUMN IF NOT EXISTS beneficiary text`,
     `ALTER TABLE welfare_campaigns ADD COLUMN IF NOT EXISTS cover_image_url text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS member_id uuid`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS campaign_id uuid`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS payer_name text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS payer_phone text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS payer_email text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS amount numeric`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS currency text DEFAULT 'KES'`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS merchant_reference text`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS pesapal_tracking_id text`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS pesapal_redirect_url text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS status text DEFAULT 'PENDING'`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS raw_callback jsonb`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT now()`,
   ];
   for (const s of alters) {
-    try { await pool.query(s); } catch { /* already exists */ }
+    try { await pool.query(s); console.log("ALTER OK:", s.slice(0,60)); } catch(e: any) { console.log("ALTER skip:", e.message.slice(0,80)); }
   }
 
   console.log("Schema ensured.");
