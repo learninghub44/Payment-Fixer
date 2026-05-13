@@ -175,7 +175,7 @@ router.post("/create", async (req: Request, res: Response) => {
     }
 
     // Submit order to Pesapal
-    let orderRes: Response;
+    let orderRes: any;
     try {
       orderRes = await fetch(`${pesapalBaseUrl(env)}/api/Transactions/SubmitOrderRequest`, {
         method: "POST",
