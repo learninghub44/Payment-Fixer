@@ -135,25 +135,36 @@ FOR ALL USING (
 -- SUPABASE STORAGE POLICIES
 -- ============================================================================
 
--- Storage bucket policies for leader-photos
-CREATE POLICY "Allow uploads" ON storage.objects
-FOR INSERT WITH CHECK (
-  bucket_id = 'leader-photos'
-);
+-- Drop existing restrictive policies first
+DROP POLICY IF EXISTS "Allow uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public reads" ON storage.objects;
+DROP POLICY IF EXISTS "Allow updates" ON storage.objects;
+DROP POLICY IF EXISTS "Allow deletes" ON storage.objects;
 
+-- Create permissive policies for leader-photos bucket
+-- Allow anyone to view leader photos (public access)
 CREATE POLICY "Allow public reads" ON storage.objects
-FOR SELECT USING (
-  bucket_id = 'leader-photos'
+FOR SELECT USING (bucket_id = 'leader-photos');
+
+-- Allow authenticated users (admins) to upload photos
+CREATE POLICY "Allow admin uploads" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'leader-photos' AND
+  auth.role() = 'authenticated'
 );
 
-CREATE POLICY "Allow updates" ON storage.objects
+-- Allow authenticated users (admins) to update photos
+CREATE POLICY "Allow admin updates" ON storage.objects
 FOR UPDATE USING (
-  bucket_id = 'leader-photos'
+  bucket_id = 'leader-photos' AND
+  auth.role() = 'authenticated'
 );
 
-CREATE POLICY "Allow deletes" ON storage.objects
+-- Allow authenticated users (admins) to delete photos
+CREATE POLICY "Allow admin deletes" ON storage.objects
 FOR DELETE USING (
-  bucket_id = 'leader-photos'
+  bucket_id = 'leader-photos' AND
+  auth.role() = 'authenticated'
 );
 
 -- ============================================================================
