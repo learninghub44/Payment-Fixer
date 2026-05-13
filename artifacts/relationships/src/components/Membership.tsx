@@ -44,20 +44,34 @@ export const Membership = () => {
     }
     setBusy(true);
     try {
-      const data = await api.post<{ id: string }>("/members", {
+      // Validate and format date
+      let dateOfBirth = null;
+      if (form.dob) {
+        const date = new Date(form.dob);
+        if (!isNaN(date.getTime())) {
+          dateOfBirth = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        }
+      }
+
+      const requestData = {
         fullName: form.fullName, phone: form.phone, email: form.email || null,
         category: form.category, institution: form.institution,
         course: form.course || null, yearOfStudy: form.yearOfStudy || null,
         studentNumber: form.studentNumber || null, county: form.county,
-        subCounty: form.subCounty || null, dateOfBirth: form.dob || null,
+        subCounty: form.subCounty || null, dateOfBirth: dateOfBirth,
         gender: form.gender || null, nextOfKinName: form.nokName || null,
         nextOfKinPhone: form.nokPhone || null, skills: form.skills || null,
         tier: form.tier,
-      });
+      };
+
+      console.log("Registration data:", requestData);
+
+      const data = await api.post<{ id: string }>("/members", requestData);
       setMemberId(data.id);
       toast({ title: "Registered ✓", description: `Complete your KES ${selectedFee.amount.toLocaleString()} registration fee to activate your membership.` });
       setStep("pay");
     } catch (e: any) {
+      console.error("Registration error:", e);
       toast({ title: "Registration failed", description: e?.message, variant: "destructive" });
     } finally { setBusy(false); }
   };

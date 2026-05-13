@@ -17,27 +17,45 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const [member] = await db.insert(members).values({
-    fullName,
-    phone,
-    email: email || null,
-    category,
-    institution,
-    course: course || null,
-    yearOfStudy: yearOfStudy || null,
-    studentNumber: studentNumber || null,
-    county,
-    subCounty: subCounty || null,
-    dateOfBirth: dateOfBirth || null,
-    gender: gender || null,
-    nextOfKinName: nextOfKinName || null,
-    nextOfKinPhone: nextOfKinPhone || null,
-    skills: skills || null,
-    tier: tier || "Member",
-    status: "Pending Payment",
-  }).returning();
+  // Validate tier
+  const validTiers = ["Member", "Leader", "Patron"];
+  const memberTier = validTiers.includes(tier) ? tier : "Member";
 
-  return res.json({ id: member.id });
+  // Validate date format if provided
+  let parsedDateOfBirth = null;
+  if (dateOfBirth) {
+    const date = new Date(dateOfBirth);
+    if (!isNaN(date.getTime())) {
+      parsedDateOfBirth = date.toISOString().split('T')[0];
+    }
+  }
+
+  try {
+    const [member] = await db.insert(members).values({
+      fullName,
+      phone,
+      email: email || null,
+      category,
+      institution,
+      course: course || null,
+      yearOfStudy: yearOfStudy || null,
+      studentNumber: studentNumber || null,
+      county,
+      subCounty: subCounty || null,
+      dateOfBirth: parsedDateOfBirth,
+      gender: gender || null,
+      nextOfKinName: nextOfKinName || null,
+      nextOfKinPhone: nextOfKinPhone || null,
+      skills: skills || null,
+      tier: memberTier,
+      status: "Pending Payment",
+    }).returning();
+
+    return res.json({ id: member.id });
+  } catch (error: any) {
+    console.error("Member registration error:", error);
+    return res.status(500).json({ error: "Failed to register member. Please try again." });
+  }
 });
 
 router.get("/", requireAdmin, async (_req: Request, res: Response) => {
