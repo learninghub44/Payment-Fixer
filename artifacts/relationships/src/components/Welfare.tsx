@@ -81,7 +81,9 @@ export const Welfare = () => {
       navigateToPesapal(order.redirect_url);
     } catch (e: any) {
       setBusy(false);
-      toast({ title: "Payment failed to start", description: e?.message, variant: "destructive" });
+      const errorMsg = e?.message || "Failed to start payment. Please try again.";
+      toast({ title: "Payment error", description: errorMsg, variant: "destructive" });
+      console.error("Payment initiation error:", e);
     }
   };
 

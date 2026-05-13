@@ -197,6 +197,19 @@ export function createApp(): express.Express {
   app.use("/api/welfare", welfareRouter);
   app.use("/api/payments", paymentsRouter);
 
+  // Global error handler - ensures JSON responses for unhandled errors
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error("Unhandled error:", err?.message || String(err));
+    res.status(err?.status || 500).json({
+      error: err?.message || "Internal server error"
+    });
+  });
+
+  // 404 handler
+  app.use((_req: Request, res: Response) => {
+    res.status(404).json({ error: "Not found" });
+  });
+
   // Static uploads (leader photos). On Vercel the filesystem is read-only,
   // so the directory may not exist — wrap in try/catch.
   const uploadsDir = path.join(process.cwd(), "public", "uploads");

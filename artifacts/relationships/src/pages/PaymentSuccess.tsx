@@ -10,7 +10,7 @@ const PaymentSuccess = () => {
   const [params] = useSearchParams();
   const merchantRef = params.get("ref") || params.get("OrderMerchantReference") || "";
   const orderTrackingId = params.get("OrderTrackingId") || "";
-  const [status, setStatus] = useState<"checking" | "completed" | "pending" | "failed">("checking");
+  const [status, setStatus] = useState<"checking" | "completed" | "pending" | "failed" | "cancelled">("checking");
   const [purpose, setPurpose] = useState<string>("");
 
   useEffect(() => {
@@ -23,7 +23,8 @@ const PaymentSuccess = () => {
         const data = await api.get<{ status: string; purpose: string }>(`/payments/status?ref=${encodeURIComponent(merchantRef)}`);
         setPurpose(data?.purpose || "");
         if (data?.status === "COMPLETED") setStatus("completed");
-        else if (data?.status === "FAILED" || data?.status === "INVALID") setStatus("failed");
+        else if (data?.status === "FAILED" || data?.status === "INVALID" || data?.status === "REVERSED") setStatus("failed");
+        else if (data?.status === "CANCELLED") setStatus("cancelled");
         else setStatus("pending");
       } catch {
         setStatus("failed");
@@ -71,6 +72,17 @@ const PaymentSuccess = () => {
                 Pesapal hasn't confirmed your payment yet. This page will update automatically — or refresh in a minute.
               </p>
               <Button onClick={() => window.location.reload()} variant="hero" className="w-full mb-2">Refresh status</Button>
+              <Link to="/"><Button variant="outline" className="w-full">Back to home</Button></Link>
+            </>
+          )}
+          {status === "cancelled" && (
+            <>
+              <AlertTriangle className="h-14 w-14 text-accent mx-auto mb-4" />
+              <h1 className="font-display text-2xl font-bold text-foreground mb-2">Payment cancelled</h1>
+              <p className="text-muted-foreground mb-6">
+                No money was taken. You can retry your payment anytime.
+              </p>
+              <Link to="/#membership"><Button variant="hero" className="w-full mb-2">Retry payment</Button></Link>
               <Link to="/"><Button variant="outline" className="w-full">Back to home</Button></Link>
             </>
           )}

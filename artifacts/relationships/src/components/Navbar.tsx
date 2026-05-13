@@ -77,7 +77,7 @@ export const Navbar = () => {
         </Link>
 
         {onHome && (
-          <ul className="hidden md:flex items-center gap-1 bg-background/60 backdrop-blur-sm rounded-full px-2 py-1 border border-border/40">
+          <ul className="hidden lg:flex items-center gap-1 bg-background/60 backdrop-blur-sm rounded-full px-2 py-1 border border-border/40">
             {links.map((l) => (
               <li key={l.href}>
                 <a
@@ -96,15 +96,15 @@ export const Navbar = () => {
           </ul>
         )}
 
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2">
           <Link to="/admin">
             <Button variant="ghost" size="sm" className="gap-1.5">
-              <ShieldCheck className="h-4 w-4" /> Portal
+              <ShieldCheck className="h-4 w-4" /> Admin
             </Button>
           </Link>
           {onHome && (
             <a href="#membership">
-              <Button variant="hero" size="sm">Join KUWESA</Button>
+              <Button variant="hero" size="sm">Join Now</Button>
             </a>
           )}
         </div>
@@ -112,42 +112,40 @@ export const Navbar = () => {
         <button
           aria-label="Toggle menu"
           onClick={() => setOpen((s) => !s)}
-          className="md:hidden p-2 rounded-md text-foreground hover:bg-secondary"
+          className="lg:hidden p-2 rounded-md text-foreground hover:bg-secondary transition-smooth"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </nav>
 
       {open && (
-        <div className="md:hidden bg-background/95 backdrop-blur-lg border-t border-border animate-fade-in">
-          <ul className="flex flex-col p-4 gap-1">
-            {onHome &&
-              links.map((l) => (
-                <li key={l.href}>
+        <div className="lg:hidden bg-background/95 backdrop-blur-lg border-t border-border animate-fade-in">
+          <div className="flex flex-col p-4 gap-2 max-h-[calc(100vh-80px)] overflow-y-auto">
+            {onHome && (
+              <div className="space-y-1 pb-4 border-b border-border">
+                {links.map((l) => (
                   <a
+                    key={l.href}
                     href={l.href}
                     onClick={() => setOpen(false)}
-                    className="block px-3 py-3 text-foreground/80 hover:text-primary hover:bg-secondary rounded-md transition-smooth"
+                    className="block px-4 py-2 text-foreground/80 hover:text-primary hover:bg-primary/5 rounded-lg transition-smooth font-medium"
                   >
                     {l.label}
                   </a>
-                </li>
-              ))}
-            <li>
-              <Link to="/admin" onClick={() => setOpen(false)}>
-                <Button variant="outline" className="w-full mt-2 gap-1.5">
-                  <ShieldCheck className="h-4 w-4" /> Admin Portal
-                </Button>
-              </Link>
-            </li>
-            {onHome && (
-              <li>
-                <a href="#membership" onClick={() => setOpen(false)}>
-                  <Button variant="hero" className="w-full mt-1">Join KUWESA</Button>
-                </a>
-              </li>
+                ))}
+              </div>
             )}
-          </ul>
+            <Link to="/admin" onClick={() => setOpen(false)} className="w-full">
+              <Button variant="outline" className="w-full gap-1.5 justify-center">
+                <ShieldCheck className="h-4 w-4" /> Admin Portal
+              </Button>
+            </Link>
+            {onHome && (
+              <a href="#membership" onClick={() => setOpen(false)} className="w-full">
+                <Button variant="hero" className="w-full">Join KUWESA Today</Button>
+              </a>
+            )}
+          </div>
         </div>
       )}
     </header>
