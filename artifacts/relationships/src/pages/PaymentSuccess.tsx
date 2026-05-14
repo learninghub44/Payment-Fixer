@@ -54,7 +54,7 @@ const PaymentSuccess = () => {
                   : "Thank you for your generous contribution. You're making a real difference."}
               </p>
               {purpose === "membership" && (
-                <a href="https://chat.whatsapp.com/JqeTvzJsLVq7IYtp4o5NJe" target="_blank" rel="noopener noreferrer" className="block mb-3">
+                <a href="https://chat.whatsapp.com/C4cyTi8UBAKBor5Yyl4JSw" target="_blank" rel="noopener noreferrer" className="block mb-3">
                   <Button variant="whatsapp" size="lg" className="w-full">
                     <MessageCircle className="h-5 w-5" />
                     Join WhatsApp Group

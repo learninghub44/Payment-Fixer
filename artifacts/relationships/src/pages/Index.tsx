@@ -13,7 +13,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const WhatsAppFAB = () => (
   <a
-    href="https://wa.me/254745523865?text=Hello%20KUWESA%2C%20I%20would%20like%20to%20know%20more%20about%20joining."
+    href="https://chat.whatsapp.com/C4cyTi8UBAKBor5Yyl4JSw"
     target="_blank"
     rel="noopener noreferrer"
     aria-label="Chat on WhatsApp"
