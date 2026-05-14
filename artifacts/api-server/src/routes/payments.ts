@@ -28,10 +28,8 @@ async function getPesapalToken() {
 }
 
 function getAppBase(req: Request) {
-  return (
-    process.env.APP_BASE_URL ||
-    `https://${(process.env.REPLIT_DOMAINS || "").split(",")[0]?.trim() || req.get("host")}`
-  );
+  // Return frontend URL for payment callbacks, not backend
+  return process.env.FRONTEND_URL || process.env.APP_BASE_URL || "https://kuriaweststudents.pages.dev";
 }
 
 let cachedIpnId: string | null = null;
@@ -191,8 +189,8 @@ router.post("/create", async (req: Request, res: Response) => {
           description:
             description ||
             (purpose === "membership" ? "KUWESA Membership Fee" : "KUWESA Welfare Contribution"),
-          callback_url: `${appBase}/payment/success?ref=${merchantRef}`,
-          cancellation_url: `${appBase}/payment/cancelled?ref=${merchantRef}`,
+          callback_url: `${process.env.FRONTEND_URL || "https://kuriaweststudents.pages.dev"}/payment/success?ref=${merchantRef}`,
+          cancellation_url: `${process.env.FRONTEND_URL || "https://kuriaweststudents.pages.dev"}/payment/failed?ref=${merchantRef}`,
           notification_id: ipnId,
           billing_address: {
             email_address: payerEmail || undefined,
