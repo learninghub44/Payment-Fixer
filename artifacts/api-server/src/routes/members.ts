@@ -15,47 +15,48 @@ router.post("/", async (req: Request, res: Response) => {
     } = req.body;
 
     if (!fullName || !phone || !category || !institution || !county) {
-      return res.status(400).json({ error: "Missing required fields: fullName, phone, category, institution, county" });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Validate tier
-    const validTiers = ["Member", "Leader", "Patron"];
-    const memberTier = validTiers.includes(tier) ? tier : "Member";
+    console.log(`Registering: ${fullName}, ${phone}`);
 
-    console.log(`Registering member: ${fullName}, ${phone}, ${category}`);
-
-    // Insert and get back the member
-    const result = await db.insert(members).values({
+    // Build values object, only including provided fields
+    const values: any = {
       fullName: fullName.trim(),
       phone: phone.trim(),
-      email: email?.trim() || null,
       category,
       institution,
-      course: course || null,
-      yearOfStudy: yearOfStudy || null,
-      studentNumber: studentNumber || null,
       county,
-      subCounty: subCounty || null,
-      dateOfBirth: dateOfBirth || null,
-      gender: gender || null,
-      nextOfKinName: nextOfKinName || null,
-      nextOfKinPhone: nextOfKinPhone || null,
-      skills: skills || null,
-      tier: memberTier,
-      status: "Pending Payment",
-    }).returning();
+    };
+
+    // Add optional fields only if provided
+    if (email) values.email = email.trim();
+    if (course) values.course = course;
+    if (yearOfStudy) values.yearOfStudy = yearOfStudy;
+    if (studentNumber) values.studentNumber = studentNumber;
+    if (subCounty) values.subCounty = subCounty;
+    if (dateOfBirth) values.dateOfBirth = dateOfBirth;
+    if (gender) values.gender = gender;
+    if (nextOfKinName) values.nextOfKinName = nextOfKinName;
+    if (nextOfKinPhone) values.nextOfKinPhone = nextOfKinPhone;
+    if (skills) values.skills = skills;
+    
+    // Don't include tier/status - let database defaults handle them
+    // if (tier) values.tier = tier;
+    // status defaults to "Pending Payment"
+
+    const result = await db.insert(members).values(values).returning();
 
     if (!result || result.length === 0) {
-      console.error("Insert returned no rows");
-      return res.status(500).json({ error: "Failed to create member record" });
+      return res.status(500).json({ error: "Failed to create member" });
     }
 
     const member = result[0];
-    console.log(`Member created successfully: ${member.id}`);
+    console.log(`✓ Member created: ${member.id}`);
     return res.json({ id: member.id });
   } catch (error: any) {
-    console.error("Member registration error:", error.message);
-    return res.status(500).json({ error: error?.message || "Failed to register member" });
+    console.error("Registration error:", error.message);
+    return res.status(500).json({ error: error?.message || "Registration failed" });
   }
 });
 

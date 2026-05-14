@@ -26,8 +26,8 @@ async function runSeedIfNeeded() {
     const existingLeaders = await db.select().from(leaders);
     if (existingLeaders.length === 0) {
       await db.insert(leaders).values([
-        { name: "AGREY CHACHA",  role: "Founder President", phone: "+254745523865", sortOrder: 1 },
-        { name: "SHARON OTAIGO", role: "Vice President",     phone: "+254748207838", sortOrder: 2 },
+        { name: "AGREY CHACHA",  position: "Founder President", phone: "+254745523865", sortOrder: 1 },
+        { name: "SHARON OTAIGO", position: "Vice President",     phone: "+254748207838", sortOrder: 2 },
       ]);
       console.log("✓ Leaders seeded.");
     } else {

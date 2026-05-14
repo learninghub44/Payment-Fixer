@@ -43,7 +43,7 @@ export const Leadership = () => {
         setLeaders(data.map((l) => ({
           id: l.id,
           name: l.name,
-          role: l.role ?? l.position,
+          role: l.position ?? l.role,
           phone: l.phone ?? null,
           photoUrl: l.photoUrl ?? l.image_url ?? null,
         })));

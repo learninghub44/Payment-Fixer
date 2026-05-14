@@ -51,7 +51,7 @@ export const announcements = pgTable("announcements", {
 export const leaders = pgTable("leaders", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  role: text("position").notNull(),
+  position: text("position").notNull(),
   phone: text("phone"),
   photoUrl: text("image_url"),
   sortOrder: integer("sort_order").default(0),
