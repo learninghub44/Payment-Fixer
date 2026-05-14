@@ -12,6 +12,7 @@ import announcementsRouter from "./routes/announcements.js";
 import leadersRouter from "./routes/leaders.js";
 import welfareRouter from "./routes/welfare.js";
 import paymentsRouter from "./routes/payments.js";
+import memberAuthRouter from "./routes/memberAuth.js";
 
 let schemaReady: Promise<void> | null = null;
 function initSchemaOnce() {
@@ -196,6 +197,7 @@ export function createApp(): express.Express {
   app.use("/api/leaders", leadersRouter);
   app.use("/api/welfare", welfareRouter);
   app.use("/api/payments", paymentsRouter);
+  app.use('/api/member', memberAuthRouter);
 
   // Global error handler - ensures JSON responses for unhandled errors
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
