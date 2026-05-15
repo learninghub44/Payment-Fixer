@@ -37,7 +37,26 @@ export function createApp(): express.Express {
   // Behind a reverse proxy (Replit, Vercel)
   app.set("trust proxy", 1);
 
-  app.use(cors({ origin: true, credentials: true }));
+  const allowedOrigins = [
+    "https://kuriaweststudents.pages.dev",
+    "https://kuwesa-payment-api.onrender.com",
+    process.env.FRONTEND_URL,
+    process.env.APP_BASE_URL,
+  ].filter(Boolean) as string[];
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, Pesapal IPN)
+        if (!origin) return callback(null, true);
+        // Allow any pages.dev subdomain (Cloudflare preview deploys)
+        if (origin.endsWith(".pages.dev")) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(null, true); // open for now — tighten after confirming domain
+      },
+      credentials: true,
+    })
+  );
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true }));
 

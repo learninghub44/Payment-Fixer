@@ -1,72 +1,91 @@
 import { Router, Request, Response } from "express";
 import { db } from "../db.js";
-import { payments } from "../shared/schema.js";
+import { payments, members, welfareCampaigns } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
 const router = Router();
 
-function getAppBase(req: Request) {
-  return process.env.FRONTEND_URL || process.env.APP_BASE_URL || "https://kuriaweststudents.pages.dev";
+const PESAPAL_BASE = "https://pay.pesapal.com/v3";
+
+function getFrontendBase(req: Request) {
+  return (
+    process.env.FRONTEND_URL ||
+    process.env.APP_BASE_URL ||
+    "https://kuriaweststudents.pages.dev"
+  );
 }
 
-async function registerIPN(req: Request): Promise<string> {
-  try {
-    const base = process.env.APP_BASE_URL || "https://kuwesa-payment-api.onrender.com";
-    const ipnUrl = `${base}/api/payments/ipn`;
-    
-    const res = await fetch("https://api.pesapal.com/api/URLSetup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url: ipnUrl,
-        ipn_notification_type: "GET",
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
+function getBackendBase() {
+  return (
+    process.env.RENDER_EXTERNAL_URL ||
+    process.env.APP_BASE_URL ||
+    "https://kuwesa-payment-api.onrender.com"
+  );
+}
 
+async function getPesapalToken(): Promise<string> {
+  const res = await fetch(`${PESAPAL_BASE}/api/Auth/RequestToken`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      consumer_key: process.env.PESAPAL_CONSUMER_KEY,
+      consumer_secret: process.env.PESAPAL_CONSUMER_SECRET,
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const data = await res.json();
+  if (!data.token) throw new Error(`Pesapal auth failed: ${JSON.stringify(data)}`);
+  return data.token;
+}
+
+async function registerIPN(token: string): Promise<string> {
+  try {
+    const ipnUrl = `${getBackendBase()}/api/payments/ipn`;
+    const res = await fetch(`${PESAPAL_BASE}/api/URLSetup/RegisterIPN`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ url: ipnUrl, ipn_notification_type: "GET" }),
+      signal: AbortSignal.timeout(10000),
+    });
     const data = await res.json();
-    return data.ipn_id || "default-ipn";
+    console.log("[IPN] Registration response:", data);
+    return data.ipn_id || "";
   } catch (e) {
-    console.error("IPN registration error:", e);
-    return "default-ipn";
+    console.error("[IPN] Registration error:", e);
+    return "";
   }
 }
 
 router.post("/create", async (req: Request, res: Response) => {
   try {
-    const {
-      purpose,
-      memberId,
-      campaignId,
-      amount,
-      payerName,
-      payerPhone,
-      payerEmail,
-      description,
-    } = req.body;
+    const { purpose, memberId, campaignId, amount, payerName, payerPhone, payerEmail, description } = req.body;
 
-    console.log("Payment request:", { purpose, amount, payerName, payerPhone });
+    console.log("[Payments] Create:", { purpose, amount, payerName, payerPhone });
 
     if (!purpose || !amount || !payerName || !payerPhone) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({ error: "Missing required fields: purpose, amount, payerName, payerPhone" });
     }
-
     if (!process.env.PESAPAL_CONSUMER_KEY || !process.env.PESAPAL_CONSUMER_SECRET) {
-      return res.status(500).json({ error: "Pesapal keys not configured" });
+      return res.status(500).json({ error: "Pesapal keys not configured on server" });
     }
 
     const merchantRef = crypto.randomUUID();
-    const ipnId = await registerIPN(req);
     const amountNum = parseFloat(String(amount));
 
-    // Create payment record
+    const token = await getPesapalToken();
+    const ipnId = await registerIPN(token);
+
     await db.insert(payments).values({
-      purpose: purpose,
+      purpose,
       memberId: memberId || null,
       campaignId: campaignId || null,
-      payerName: payerName,
-      payerPhone: payerPhone,
+      payerName,
+      payerPhone,
       payerEmail: payerEmail || null,
       amount: String(amountNum),
       currency: "KES",
@@ -74,32 +93,18 @@ router.post("/create", async (req: Request, res: Response) => {
       status: "PENDING",
     });
 
-    // Pesapal OAuth
-    const authRes = await fetch("https://pesapalapi.azurewebsites.net/api/Auth/RequestToken", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        consumer_key: process.env.PESAPAL_CONSUMER_KEY,
-        consumer_secret: process.env.PESAPAL_CONSUMER_SECRET,
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-
-    const authData = await authRes.json();
-    if (!authData.token) throw new Error("Failed to get auth token");
-
-    // Submit order
-    const frontendBase = getAppBase(req);
-    const orderRes = await fetch("https://pesapalapi.azurewebsites.net/api/WebsitePaymentSubmission/ProcessPayment", {
+    const frontendBase = getFrontendBase(req);
+    const orderRes = await fetch(`${PESAPAL_BASE}/api/Transactions/SubmitOrderRequest`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${authData.token}`,
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        invoice_number: merchantRef,
-        amount: amountNum,
+        id: merchantRef,
         currency: "KES",
+        amount: amountNum,
         description: description || purpose,
         callback_url: `${frontendBase}/payment/success?ref=${merchantRef}`,
         cancellation_url: `${frontendBase}/payment/failed?ref=${merchantRef}`,
@@ -111,41 +116,39 @@ router.post("/create", async (req: Request, res: Response) => {
           last_name: payerName.split(" ").slice(1).join(" ") || "KUWESA",
         },
       }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(20000),
     });
 
     const orderData = await orderRes.json();
-    console.log("Pesapal response:", orderData);
+    console.log("[Payments] Pesapal response:", orderData);
 
     if (!orderData.redirect_url) {
-      throw new Error(orderData.error || "No redirect URL from Pesapal");
+      throw new Error(orderData.error?.message || orderData.message || "No redirect URL from Pesapal");
     }
 
-    // Update payment with redirect URL
     await db
       .update(payments)
-      .set({ pesapalRedirectUrl: orderData.redirect_url })
+      .set({ pesapalTrackingId: orderData.order_tracking_id || null, pesapalRedirectUrl: orderData.redirect_url })
       .where(eq(payments.merchantReference, merchantRef));
 
     return res.json({
       redirect_url: orderData.redirect_url,
       merchant_reference: merchantRef,
+      order_tracking_id: orderData.order_tracking_id,
     });
   } catch (error: any) {
-    console.error("Payment creation error:", error.message);
-    return res.status(500).json({ error: error?.message || "Payment failed" });
+    console.error("[Payments] Error:", error.message);
+    return res.status(500).json({ error: error?.message || "Payment initiation failed" });
   }
 });
 
 router.get("/status", async (req: Request, res: Response) => {
   try {
     const ref = String(req.query.merchantReference || "");
-    if (!ref) return res.status(400).json({ error: "Reference required" });
-
+    if (!ref) return res.status(400).json({ error: "merchantReference required" });
     const rows = await db.select().from(payments).where(eq(payments.merchantReference, ref));
     if (rows.length === 0) return res.status(404).json({ error: "Payment not found" });
-
-    return res.json({ status: rows[0].status });
+    return res.json({ status: rows[0].status, payment: rows[0] });
   } catch (e: any) {
     return res.status(500).json({ error: e?.message });
   }
@@ -153,19 +156,68 @@ router.get("/status", async (req: Request, res: Response) => {
 
 router.get("/ipn", async (req: Request, res: Response) => {
   try {
-    console.log("IPN webhook received:", req.query);
-    const ref = String(req.query.OrderMerchantReference || "");
-    if (!ref) return res.status(400).json({ error: "No reference" });
+    console.log("[IPN] Received:", req.query);
+    const orderTrackingId = String(req.query.OrderTrackingId || "");
+    const merchantRef = String(req.query.OrderMerchantReference || "");
 
-    // Update payment status
+    if (!merchantRef) return res.status(200).json({ message: "ok" });
+
+    let pesapalStatus = "COMPLETED";
+    try {
+      const token = await getPesapalToken();
+      const verifyRes = await fetch(
+        `${PESAPAL_BASE}/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`,
+        {
+          headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+      const verifyData = await verifyRes.json();
+      console.log("[IPN] Verify:", verifyData);
+      const desc = (verifyData.payment_status_description || "").toLowerCase();
+      if (desc === "completed") pesapalStatus = "COMPLETED";
+      else if (desc === "failed" || desc === "invalid") pesapalStatus = "FAILED";
+      else pesapalStatus = "PENDING";
+    } catch (err) {
+      console.error("[IPN] Verify error:", err);
+    }
+
+    const rows = await db.select().from(payments).where(eq(payments.merchantReference, merchantRef));
+    if (rows.length === 0) return res.status(200).json({ message: "ok" });
+
+    const payment = rows[0];
     await db
       .update(payments)
-      .set({ status: "COMPLETED" })
-      .where(eq(payments.merchantReference, ref));
+      .set({ status: pesapalStatus, pesapalTrackingId: orderTrackingId || payment.pesapalTrackingId, rawCallback: req.query as any })
+      .where(eq(payments.merchantReference, merchantRef));
 
-    return res.json({ success: true });
+    if (pesapalStatus === "COMPLETED") {
+      if (payment.memberId) {
+        await db.update(members).set({ status: "Paid" }).where(eq(members.id, payment.memberId));
+        console.log("[IPN] ✓ Member marked Paid:", payment.memberId);
+      }
+      if (payment.campaignId) {
+        const camps = await db.select().from(welfareCampaigns).where(eq(welfareCampaigns.id, payment.campaignId));
+        if (camps.length > 0) {
+          const newAmount = Number(camps[0].raisedAmount || 0) + Number(payment.amount || 0);
+          await db.update(welfareCampaigns).set({ raisedAmount: String(newAmount) }).where(eq(welfareCampaigns.id, payment.campaignId));
+          console.log("[IPN] ✓ Welfare campaign updated:", payment.campaignId);
+        }
+      }
+    }
+
+    return res.status(200).json({ message: "ok", status: pesapalStatus });
   } catch (e: any) {
-    console.error("IPN error:", e);
+    console.error("[IPN] Error:", e.message);
+    return res.status(200).json({ message: "ok" });
+  }
+});
+
+router.get("/", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db.select().from(payments);
+    return res.json(rows);
+  } catch (e: any) {
     return res.status(500).json({ error: e?.message });
   }
 });

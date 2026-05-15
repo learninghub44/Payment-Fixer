@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Claude-style Typography ─────────────────────── */
+/* Inter for body text (clean, modern, readable like Claude UI)
+   Poppins for display/headings (bold personality) */
+
+@layer base {
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: -0.011em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', 'Inter', sans-serif;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    font-size: 1rem;
+    line-height: 1.7;
+    letter-spacing: -0.005em;
+  }
+
+  /* Claude-style subtle label / caption text */
+  .text-caption {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Monospace for any code snippets */
+  code, pre {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.9em;
+  }
+}
+
 /* KUWESA Design System — Green/White, modern youth styling.
    All colors MUST be HSL. */
 
