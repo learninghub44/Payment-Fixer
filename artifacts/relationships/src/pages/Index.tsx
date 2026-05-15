@@ -1,66 +1,147 @@
 import { useEffect, useState } from "react";
-import { Navbar } from "@/components/Navbar";
+import { ChevronRight, Play, Users, Award, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+import event1 from "@/assets/kuwesa-event-1.webp";
+import event2 from "@/assets/kuwesa-event-2.webp";
+import event3 from "@/assets/kuwesa-event-3.webp";
+import event4 from "@/assets/kuwesa-event-4.webp";
+import event5 from "@/assets/kuwesa-event-5.webp";
+import event6 from "@/assets/kuwesa-event-6.webp";
+import event8 from "@/assets/kuwesa-event-8.webp";
+import event9 from "@/assets/kuwesa-event-9.webp";
+import event10 from "@/assets/kuwesa-event-10.webp";
+
 import { Hero } from "@/components/Hero";
 import { About } from "@/components/About";
-import { Programs } from "@/components/Programs";
 import { Leadership } from "@/components/Leadership";
-import { Membership } from "@/components/Membership";
-import { Welfare } from "@/components/Welfare";
 import { Announcements } from "@/components/Announcements";
+import { Membership } from "@/components/Membership";
+import { WelfareSection } from "@/components/WelfareSection";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
 
-const WhatsAppFAB = () => (
-  <a
-    href="https://chat.whatsapp.com/C4cyTi8UBAKBor5Yyl4JSw"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Chat on WhatsApp"
-    className="fab-whatsapp"
-  >
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-    </svg>
-  </a>
-);
+const HERO_IMAGES = [event1, event2, event3, event4, event5, event6, event8, event9, event10];
 
-function ReadingProgress() {
-  const [width, setWidth] = useState(0);
+export default function IndexPage() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [autoplay, setAutoplay] = useState(true);
+
   useEffect(() => {
-    const update = () => {
-      const el = document.documentElement;
-      const scrolled = el.scrollTop || document.body.scrollTop;
-      const total = el.scrollHeight - el.clientHeight;
-      setWidth(total > 0 ? (scrolled / total) * 100 : 0);
-    };
-    window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
-  }, []);
-  return <div id="read-progress" style={{ width: `${width}%` }} />;
-}
+    if (!autoplay) return;
 
-const Index = () => {
-  useScrollReveal();
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [autoplay]);
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index);
+    setAutoplay(false);
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <ReadingProgress />
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Programs />
-        <Announcements />
-        <Leadership />
-        <Membership />
-        <Welfare />
-        <Contact />
-      </main>
-      <Footer />
-      <WhatsAppFAB />
-    </div>
-  );
-};
+    <>
+      {/* Hero with Image Carousel */}
+      <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
+        {/* Background Images */}
+        {HERO_IMAGES.map((image, index) => (
+          <img
+            key={index}
+            src={image}
+            alt={`KUWESA Event ${index + 1}`}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+              index === currentImageIndex ? "opacity-100" : "opacity-0"
+            }`}
+            loading={index === 0 ? "eager" : "lazy"}
+          />
+        ))}
 
-export default Index;
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40 z-10" />
+
+        {/* Content */}
+        <div className="relative z-20 container-custom text-center text-white">
+          <div className="max-w-3xl mx-auto reveal-up">
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-bold mb-6 leading-tight">
+              Kuria West <span className="text-primary">Student</span> Association
+            </h1>
+            <p className="text-lg sm:text-xl md:text-2xl mb-8 text-gray-100">
+              Empowering students through unity, education, and leadership
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a href="#membership">
+                <Button size="lg" variant="hero" className="gap-2">
+                  Join Now <ChevronRight className="h-5 w-5" />
+                </Button>
+              </a>
+              <a href="#about">
+                <Button size="lg" variant="outline" className="gap-2">
+                  Learn More
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Image Carousel Controls */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
+          {HERO_IMAGES.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToImage(index)}
+              className={`h-3 rounded-full transition-all ${
+                index === currentImageIndex ? "w-8 bg-primary" : "w-3 bg-white/50 hover:bg-white/75"
+              }`}
+              aria-label={`Go to image ${index + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Autoplay Toggle */}
+        <button
+          onClick={() => setAutoplay(!autoplay)}
+          className="absolute bottom-8 right-8 z-20 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all"
+          aria-label="Toggle autoplay"
+        >
+          <Play className="h-5 w-5" />
+        </button>
+      </section>
+
+      {/* Stats Section */}
+      <section className="bg-primary text-white py-12">
+        <div className="container-custom">
+          <div className="grid sm:grid-cols-3 gap-8 text-center">
+            <div className="reveal">
+              <Users className="h-8 w-8 mx-auto mb-2" />
+              <div className="font-display text-3xl font-bold">1000+</div>
+              <p className="text-sm text-primary-foreground/80">Active Members</p>
+            </div>
+            <div className="reveal delay-100">
+              <Award className="h-8 w-8 mx-auto mb-2" />
+              <div className="font-display text-3xl font-bold">7</div>
+              <p className="text-sm text-primary-foreground/80">Wards Represented</p>
+            </div>
+            <div className="reveal delay-200">
+              <Zap className="h-8 w-8 mx-auto mb-2" />
+              <div className="font-display text-3xl font-bold">2025</div>
+              <p className="text-sm text-primary-foreground/80">Year Founded</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Other Sections */}
+      <Hero />
+      <About />
+      <Leadership />
+      <Announcements />
+      <Membership />
+      <WelfareSection />
+      <Contact />
+      <Footer />
+    </>
+  );
+}
