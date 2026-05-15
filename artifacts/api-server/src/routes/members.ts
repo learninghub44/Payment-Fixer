@@ -4,12 +4,22 @@ import { requireAdmin } from "../middleware/requireAdmin.js";
 
 const router = Router();
 
-// Drop blocking constraints + ensure all columns exist
+// Drop ALL check constraints on members table, then ensure columns exist
 async function ensureColumns() {
-  const sqls = [
-    `ALTER TABLE members DROP CONSTRAINT IF EXISTS members_category_check`,
-    `ALTER TABLE members DROP CONSTRAINT IF EXISTS members_status_check`,
-    `ALTER TABLE members DROP CONSTRAINT IF EXISTS members_tier_check`,
+  try {
+    const { rows } = await pool.query(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_name = 'members' AND constraint_type = 'CHECK' AND table_schema = 'public'
+    `);
+    for (const row of rows) {
+      try {
+        await pool.query(`ALTER TABLE members DROP CONSTRAINT IF EXISTS "${row.constraint_name}"`);
+        console.log("[Members] Dropped constraint:", row.constraint_name);
+      } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
+
+  const alters = [
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS tier text DEFAULT 'Member'`,
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS sub_county text`,
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS date_of_birth date`,
@@ -19,18 +29,17 @@ async function ensureColumns() {
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS skills text`,
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS student_number text`,
   ];
-  for (const sql of sqls) {
+  for (const sql of alters) {
     try { await pool.query(sql); } catch { /* ignore */ }
   }
 }
 
-// Run once on startup
+// Run on startup
 ensureColumns().catch(console.error);
 
 // POST /api/members
 router.post("/", async (req: Request, res: Response) => {
   try {
-    // Run again to make sure constraints are dropped before each insert
     await ensureColumns();
 
     const {
@@ -40,7 +49,7 @@ router.post("/", async (req: Request, res: Response) => {
       nextOfKinName, nextOfKinPhone, skills, tier,
     } = req.body;
 
-    console.log("[Members] Creating:", { fullName, phone, institution, tier, category });
+    console.log("[Members] Creating:", { fullName, phone, institution, tier, category, gender });
 
     if (!fullName?.trim()) return res.status(400).json({ error: "Full name is required" });
     if (!phone?.trim())    return res.status(400).json({ error: "Phone number is required" });
