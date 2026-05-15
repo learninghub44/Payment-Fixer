@@ -6,60 +6,54 @@ import { requireAdmin } from "../middleware/requireAdmin.js";
 
 const router = Router();
 
+// Create member
 router.post("/", async (req: Request, res: Response) => {
   try {
     const {
       fullName, phone, email, category, institution, course, yearOfStudy,
       studentNumber, county, subCounty, dateOfBirth, gender,
-      nextOfKinName, nextOfKinPhone, skills, tier,
+      nextOfKinName, nextOfKinPhone, skills,
     } = req.body;
 
-    if (!fullName || !phone || !category || !institution || !county) {
+    // Validate required fields
+    if (!fullName?.trim() || !phone?.trim() || !category || !institution || !county) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    console.log(`Registering: ${fullName}, ${phone}`);
+    console.log(`[Members] Creating: ${fullName} | ${phone}`);
 
-    // Build values object, only including provided fields
-    const values: any = {
+    // Insert member - only required fields, let DB handle defaults
+    const result = await db.insert(members).values({
       fullName: fullName.trim(),
       phone: phone.trim(),
+      email: email?.trim() || null,
       category,
       institution,
+      course: course?.trim() || null,
+      yearOfStudy: yearOfStudy?.trim() || null,
+      studentNumber: studentNumber?.trim() || null,
       county,
-    };
+      subCounty: subCounty?.trim() || null,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString().split('T')[0] : null,
+      gender: gender || null,
+      nextOfKinName: nextOfKinName?.trim() || null,
+      nextOfKinPhone: nextOfKinPhone?.trim() || null,
+      skills: skills?.trim() || null,
+    }).returning();
 
-    // Add optional fields only if provided
-    if (email) values.email = email.trim();
-    if (course) values.course = course;
-    if (yearOfStudy) values.yearOfStudy = yearOfStudy;
-    if (studentNumber) values.studentNumber = studentNumber;
-    if (subCounty) values.subCounty = subCounty;
-    if (dateOfBirth) values.dateOfBirth = dateOfBirth;
-    if (gender) values.gender = gender;
-    if (nextOfKinName) values.nextOfKinName = nextOfKinName;
-    if (nextOfKinPhone) values.nextOfKinPhone = nextOfKinPhone;
-    if (skills) values.skills = skills;
-    
-    // Don't include tier/status - let database defaults handle them
-    // if (tier) values.tier = tier;
-    // status defaults to "Pending Payment"
-
-    const result = await db.insert(members).values(values).returning();
-
-    if (!result || result.length === 0) {
+    if (!result?.length) {
       return res.status(500).json({ error: "Failed to create member" });
     }
 
-    const member = result[0];
-    console.log(`✓ Member created: ${member.id}`);
-    return res.json({ id: member.id });
+    console.log(`[Members] ✓ Created: ${result[0].id}`);
+    return res.json({ id: result[0].id, fullName: result[0].fullName });
   } catch (error: any) {
-    console.error("Registration error:", error.message);
-    return res.status(500).json({ error: error?.message || "Registration failed" });
+    console.error(`[Members] ✗ Error:`, error.message);
+    return res.status(500).json({ error: "Registration failed. Please try again." });
   }
 });
 
+// Get all members (admin)
 router.get("/", requireAdmin, async (_req: Request, res: Response) => {
   try {
     const rows = await db.select().from(members).orderBy(desc(members.joinedAt));
@@ -69,11 +63,13 @@ router.get("/", requireAdmin, async (_req: Request, res: Response) => {
   }
 });
 
+// Update member status (admin)
 router.patch("/:id/status", requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
     if (!status) return res.status(400).json({ error: "Status required" });
+    
     await db.update(members).set({ status }).where(eq(members.id, String(id)));
     return res.json({ ok: true });
   } catch (e: any) {
@@ -81,6 +77,7 @@ router.patch("/:id/status", requireAdmin, async (req: Request, res: Response) =>
   }
 });
 
+// Delete member (admin)
 router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
