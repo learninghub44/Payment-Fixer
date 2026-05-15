@@ -121,9 +121,18 @@ export const Membership = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      // 1. Wake up Render server (free tier sleeps after inactivity)
+      try {
+        await api.get("/healthz");
+      } catch {
+        // Ignore — server may be cold-starting, proceed anyway
+      }
+
+      // 2. Register member
       const member = await api.post<any>("/members", form);
       if (!member?.id) throw new Error("Registration failed — no member ID returned");
 
+      // 3. Create payment
       const fee = FEES[form.tier];
       const payment = await api.post<any>("/payments/create", {
         purpose: "membership",
@@ -138,13 +147,17 @@ export const Membership = () => {
       if (payment?.redirect_url) {
         window.location.href = payment.redirect_url;
       } else {
-        throw new Error("Payment initialization failed — no redirect URL");
+        throw new Error("Payment initialization failed — no redirect URL received");
       }
     } catch (error: any) {
       console.error("Registration error:", error);
+      const msg = error?.message || "Please try again";
+      const isServerSleep = msg.includes("starting up") || msg.includes("502") || msg.includes("503");
       toast({
-        title: "Registration Failed",
-        description: error?.message || "Please try again",
+        title: isServerSleep ? "Server is waking up..." : "Registration Failed",
+        description: isServerSleep
+          ? "The server was sleeping. Please wait 30 seconds and try again."
+          : msg,
         variant: "destructive",
       });
       setLoading(false);

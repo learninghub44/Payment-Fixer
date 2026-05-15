@@ -12,44 +12,58 @@ router.post("/", async (req: Request, res: Response) => {
     const {
       fullName, phone, email, category, institution, course, yearOfStudy,
       studentNumber, county, subCounty, dateOfBirth, gender,
-      nextOfKinName, nextOfKinPhone, skills,
+      nextOfKinName, nextOfKinPhone, skills, tier,
     } = req.body;
 
-    // Validate required fields
-    if (!fullName?.trim() || !phone?.trim() || !category || !institution || !county) {
-      return res.status(400).json({ error: "Missing required fields" });
+    console.log(`[Members] Create request body:`, JSON.stringify({
+      fullName, phone, category, institution, county, tier
+    }));
+
+    // Validate required fields — county is ward in our form
+    if (!fullName?.trim()) {
+      return res.status(400).json({ error: "Full name is required" });
+    }
+    if (!phone?.trim()) {
+      return res.status(400).json({ error: "Phone number is required" });
+    }
+    if (!institution?.trim()) {
+      return res.status(400).json({ error: "Institution is required" });
     }
 
-    console.log(`[Members] Creating: ${fullName} | ${phone}`);
-
-    // Insert member - only required fields, let DB handle defaults
+    // Insert member
     const result = await db.insert(members).values({
       fullName: fullName.trim(),
       phone: phone.trim(),
       email: email?.trim() || null,
-      category,
-      institution,
+      category: category || "Student",
+      institution: institution.trim(),
       course: course?.trim() || null,
       yearOfStudy: yearOfStudy?.trim() || null,
       studentNumber: studentNumber?.trim() || null,
-      county,
+      county: county?.trim() || null,       // ward — optional so we don't block registration
       subCounty: subCounty?.trim() || null,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString().split('T')[0] : null,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString().split("T")[0] : null,
       gender: gender || null,
       nextOfKinName: nextOfKinName?.trim() || null,
       nextOfKinPhone: nextOfKinPhone?.trim() || null,
       skills: skills?.trim() || null,
+      tier: tier || "Member",              // ← was missing before!
     }).returning();
 
     if (!result?.length) {
-      return res.status(500).json({ error: "Failed to create member" });
+      return res.status(500).json({ error: "Database insert returned no rows" });
     }
 
-    console.log(`[Members] ✓ Created: ${result[0].id}`);
+    console.log(`[Members] ✓ Created member: ${result[0].id} | ${result[0].fullName}`);
     return res.json({ id: result[0].id, fullName: result[0].fullName });
+
   } catch (error: any) {
-    console.error(`[Members] ✗ Error:`, error.message);
-    return res.status(500).json({ error: "Registration failed. Please try again." });
+    // Return the REAL error message so we can debug
+    console.error(`[Members] ✗ Error:`, error.message, error.code);
+    return res.status(500).json({
+      error: error?.message || "Registration failed. Please try again.",
+      code: error?.code,
+    });
   }
 });
 
@@ -69,7 +83,6 @@ router.patch("/:id/status", requireAdmin, async (req: Request, res: Response) =>
     const { id } = req.params;
     const { status } = req.body;
     if (!status) return res.status(400).json({ error: "Status required" });
-    
     await db.update(members).set({ status }).where(eq(members.id, String(id)));
     return res.json({ ok: true });
   } catch (e: any) {
