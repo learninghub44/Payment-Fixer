@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-type FormStep = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 interface FormData {
   fullName: string;
@@ -15,7 +15,6 @@ interface FormData {
   county: string;
   course?: string;
   yearOfStudy?: string;
-  studentNumber?: string;
   gender?: string;
   nextOfKinName?: string;
   nextOfKinPhone?: string;
@@ -36,7 +35,7 @@ const WARDS = [
 
 export const Membership = () => {
   const { toast } = useToast();
-  const [step, setStep] = useState<FormStep>(1);
+  const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormData>({
     fullName: "",
@@ -49,32 +48,40 @@ export const Membership = () => {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleTierChange = (tier: "Member" | "Leader" | "Patron") => {
+  const handleTierSelect = (tier: "Member" | "Leader" | "Patron") => {
     setForm((prev) => ({ ...prev, tier }));
+  };
+
+  const validateStep = (): boolean => {
+    if (step === 1) return !!form.tier;
+    if (step === 2) return form.fullName && form.phone && form.institution && form.county;
+    if (step === 3) return true;
+    if (step === 4) return !!form.county;
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step < 5) {
-      setStep((prev) => (prev + 1) as FormStep);
+
+    if (!validateStep()) {
+      toast({ title: "Please complete this section", variant: "destructive" });
       return;
     }
 
-    // Validate required fields
-    if (!form.fullName || !form.phone || !form.institution || !form.county) {
-      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
+    if (step < 5) {
+      setStep((prev) => (prev + 1) as Step);
+      window.scrollTo(0, 0);
       return;
     }
 
     setLoading(true);
     try {
-      // Create member
+      // Register member
       const member = await api.post<any>("/members", form);
-      if (!member?.id) throw new Error("Failed to create member");
+      if (!member?.id) throw new Error("Registration failed");
 
       // Create payment
       const fee = FEES[form.tier];
@@ -91,9 +98,10 @@ export const Membership = () => {
       if (payment?.redirect_url) {
         window.location.href = payment.redirect_url;
       } else {
-        throw new Error("No payment link received");
+        throw new Error("Payment initialization failed");
       }
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Registration Failed",
         description: error?.message || "Please try again",
@@ -106,52 +114,49 @@ export const Membership = () => {
   const fee = FEES[form.tier];
 
   return (
-    <section id="membership" className="section-padding bg-background">
+    <section id="membership" className="section-padding bg-white">
       <span className="section-number">06</span>
       <div className="container-custom">
-        <div className="text-center max-w-3xl mx-auto mb-12 reveal">
-          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wider uppercase mb-4">
-            Join KUWESA
-          </span>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-foreground text-balance mb-4">
-            Association <span className="text-primary">Registration</span>
+        <div className="text-center max-w-3xl mx-auto mb-16 reveal">
+          <div className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-widest uppercase mb-4">
+            Membership
+          </div>
+          <h2 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-6">
+            Join <span className="text-primary">KUWESA</span>
           </h2>
-          <p className="text-muted-foreground text-base sm:text-lg">
-            Join thousands of Kuria West students. Fill your details and complete payment to activate your account.
+          <p className="text-lg text-muted-foreground">
+            Become part of a vibrant community of empowered students across Kuria West
           </p>
         </div>
 
-        {/* Member Login CTA */}
-        <div className="max-w-2xl mx-auto mb-8 bg-accent/10 border-2 border-accent/30 rounded-2xl p-6 text-center reveal">
+        {/* Already Registered */}
+        <div className="max-w-2xl mx-auto mb-8 bg-accent/10 border-2 border-accent/30 rounded-xl p-6 text-center reveal">
           <p className="text-sm text-foreground mb-2">Already a member?</p>
-          <a href="/member/login" className="text-accent font-bold hover:underline">
-            Login to your dashboard →
+          <a href="/member/login" className="text-accent font-semibold hover:underline flex items-center justify-center gap-1">
+            Access your dashboard <ChevronRight className="h-4 w-4" />
           </a>
         </div>
 
-        {/* Form Card */}
-        <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-elegant p-8 border border-border/50 reveal">
+        {/* Registration Form */}
+        <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100 p-8 reveal">
           {/* Progress */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex justify-between mb-6">
               {[1, 2, 3, 4, 5].map((s) => (
                 <div key={s} className="flex flex-col items-center gap-2">
                   <div
                     className={`h-10 w-10 rounded-full flex items-center justify-center font-semibold transition-all ${
                       step >= s
                         ? "bg-primary text-white"
-                        : "bg-secondary text-muted-foreground"
+                        : "bg-gray-100 text-gray-400"
                     }`}
                   >
                     {step > s ? <Check className="h-5 w-5" /> : s}
                   </div>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {["Fee", "Personal", "Academic", "Ward", "Confirm"][s - 1]}
-                  </span>
                 </div>
               ))}
             </div>
-            <div className="h-1 bg-secondary rounded-full overflow-hidden">
+            <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary transition-all duration-300"
                 style={{ width: `${(step / 5) * 100}%` }}
@@ -160,7 +165,7 @@ export const Membership = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Step 1: Fee Selection */}
+            {/* Step 1: Tier */}
             {step === 1 && (
               <div className="space-y-4 animate-in fade-in">
                 <h3 className="font-display text-xl font-bold text-foreground">Select Membership Type</h3>
@@ -169,106 +174,97 @@ export const Membership = () => {
                     <button
                       key={tier}
                       type="button"
-                      onClick={() => handleTierChange(tier)}
-                      className={`p-6 rounded-2xl border-2 transition-all text-center ${
+                      onClick={() => handleTierSelect(tier)}
+                      className={`p-6 rounded-xl border-2 transition-all ${
                         form.tier === tier
-                          ? "border-primary bg-primary/5"
-                          : "border-border/50 hover:border-primary/50"
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-gray-200 hover:border-primary/50"
                       }`}
                     >
-                      <div className="font-display text-2xl font-bold text-primary mb-2">
+                      <div className="font-display text-3xl font-bold text-primary mb-2">
                         KES {FEES[tier]}
                       </div>
                       <div className="font-semibold text-foreground">{tier}</div>
-                      <div className="text-xs text-muted-foreground mt-2">
-                        {tier === "Member" && "Full member benefits"}
-                        {tier === "Leader" && "Leadership roles"}
-                        {tier === "Patron" && "Patron benefits"}
-                      </div>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Step 2: Personal Info */}
+            {/* Step 2: Personal */}
             {step === 2 && (
               <div className="space-y-4 animate-in fade-in">
-                <h3 className="font-display text-xl font-bold text-foreground">Personal Information</h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    name="fullName"
-                    placeholder="Full Name *"
-                    value={form.fullName}
-                    onChange={handleChange}
-                    className="col-span-2 px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder="Phone Number *"
-                    value={form.phone}
-                    onChange={handleChange}
-                    className="px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="Email"
-                    value={form.email}
-                    onChange={handleChange}
-                    className="px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
+                <h3 className="font-display text-xl font-bold text-foreground">Your Information</h3>
+                <input
+                  type="text"
+                  name="fullName"
+                  placeholder="Full Name *"
+                  value={form.fullName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Phone Number *"
+                  value={form.phone}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email (optional)"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <input
+                  type="text"
+                  name="institution"
+                  placeholder="School/Institution *"
+                  value={form.institution}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
               </div>
             )}
 
-            {/* Step 3: Academic Info */}
+            {/* Step 3: Academic */}
             {step === 3 && (
               <div className="space-y-4 animate-in fade-in">
-                <h3 className="font-display text-xl font-bold text-foreground">Academic Information</h3>
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    name="institution"
-                    placeholder="Institution/School *"
-                    value={form.institution}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                  <input
-                    type="text"
-                    name="course"
-                    placeholder="Course/Subject"
-                    value={form.course}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <input
-                    type="text"
-                    name="yearOfStudy"
-                    placeholder="Year of Study"
-                    value={form.yearOfStudy}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
+                <h3 className="font-display text-xl font-bold text-foreground">Academic Details</h3>
+                <input
+                  type="text"
+                  name="course"
+                  placeholder="Course/Subject"
+                  value={form.course}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <input
+                  type="text"
+                  name="yearOfStudy"
+                  placeholder="Year of Study"
+                  value={form.yearOfStudy}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
               </div>
             )}
 
-            {/* Step 4: Ward Selection */}
+            {/* Step 4: Ward */}
             {step === 4 && (
               <div className="space-y-4 animate-in fade-in">
-                <h3 className="font-display text-xl font-bold text-foreground">Area of Origin</h3>
+                <h3 className="font-display text-xl font-bold text-foreground">Your Ward</h3>
                 <select
                   name="county"
                   value={form.county}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 >
                   <option value="">Select Your Ward *</option>
@@ -280,35 +276,35 @@ export const Membership = () => {
                 </select>
                 <textarea
                   name="skills"
-                  placeholder="Skills / Talents (optional)"
+                  placeholder="Skills & Talents"
                   value={form.skills}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   rows={3}
                 />
               </div>
             )}
 
-            {/* Step 5: Confirmation */}
+            {/* Step 5: Confirm */}
             {step === 5 && (
               <div className="space-y-4 animate-in fade-in">
                 <h3 className="font-display text-xl font-bold text-foreground">Confirm Registration</h3>
-                <div className="bg-secondary rounded-2xl p-6 space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Name:</span>
+                <div className="bg-gray-50 rounded-lg p-6 space-y-3 text-sm">
+                  <div className="flex justify-between border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Name:</span>
                     <span className="font-semibold text-foreground">{form.fullName}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Phone:</span>
+                  <div className="flex justify-between border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Phone:</span>
                     <span className="font-semibold text-foreground">{form.phone}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Institution:</span>
+                  <div className="flex justify-between border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Institution:</span>
                     <span className="font-semibold text-foreground">{form.institution}</span>
                   </div>
-                  <div className="flex justify-between border-t border-border/50 pt-3">
-                    <span className="text-muted-foreground">Fee:</span>
-                    <span className="font-bold text-primary text-lg">KES {fee}</span>
+                  <div className="flex justify-between pt-3">
+                    <span className="text-gray-600">Total Amount:</span>
+                    <span className="font-bold text-lg text-primary">KES {fee}</span>
                   </div>
                 </div>
               </div>
@@ -319,8 +315,8 @@ export const Membership = () => {
               {step > 1 && (
                 <button
                   type="button"
-                  onClick={() => setStep((prev) => (prev - 1) as FormStep)}
-                  className="px-6 py-3 rounded-xl border border-border hover:bg-secondary transition-colors font-semibold"
+                  onClick={() => setStep((prev) => (prev - 1) as Step)}
+                  className="px-6 py-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors font-semibold"
                   disabled={loading}
                 >
                   Back
@@ -328,17 +324,17 @@ export const Membership = () => {
               )}
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50"
                 disabled={loading}
+                className="flex-1 px-6 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {step === 5 ? (loading ? "Processing..." : `Pay KES ${fee} & Register`) : "Continue"}
+                {step < 5 && <ChevronRight className="h-4 w-4" />}
               </button>
             </div>
           </form>
 
-          {/* Info */}
-          <p className="text-xs text-muted-foreground text-center mt-6 pt-6 border-t border-border/50">
-            ✓ Secure payment via Pesapal • ✓ Instant account activation • ✓ Access member dashboard
+          <p className="text-xs text-center text-gray-500 mt-6 pt-6 border-t border-gray-200">
+            Secure payment via Pesapal • Instant activation • Access member dashboard
           </p>
         </div>
       </div>
