@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db } from "../db.js";
-import { payments, members } from "../shared/schema.js";
+import { payments } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -58,16 +58,17 @@ router.post("/create", async (req: Request, res: Response) => {
 
     const merchantRef = crypto.randomUUID();
     const ipnId = await registerIPN(req);
+    const amountNum = parseFloat(String(amount));
 
     // Create payment record
     await db.insert(payments).values({
-      purpose,
+      purpose: purpose,
       memberId: memberId || null,
       campaignId: campaignId || null,
-      payerName,
-      payerPhone,
+      payerName: payerName,
+      payerPhone: payerPhone,
       payerEmail: payerEmail || null,
-      amount: parseFloat(amount),
+      amount: String(amountNum),
       currency: "KES",
       merchantReference: merchantRef,
       status: "PENDING",
@@ -97,7 +98,7 @@ router.post("/create", async (req: Request, res: Response) => {
       },
       body: JSON.stringify({
         invoice_number: merchantRef,
-        amount: Number(amount),
+        amount: amountNum,
         currency: "KES",
         description: description || purpose,
         callback_url: `${frontendBase}/payment/success?ref=${merchantRef}`,
@@ -106,8 +107,8 @@ router.post("/create", async (req: Request, res: Response) => {
         billing_address: {
           email_address: payerEmail || "noemail@kuwesa.local",
           phone_number: payerPhone,
-          first_name: payerName.split(" ")[0],
-          last_name: payerName.split(" ")[1] || "User",
+          first_name: payerName.split(" ")[0] || "Student",
+          last_name: payerName.split(" ").slice(1).join(" ") || "KUWESA",
         },
       }),
       signal: AbortSignal.timeout(8000),

@@ -33,7 +33,7 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 export const Leadership = () => {
-  const [leaders, setLeaders] = useState(LEADERS);
+  const [leaders, setLeaders] = useState<any>(LEADERS);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export const Leadership = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {leaders.map((leader, idx) => (
+          {leaders.map((leader: any, idx: number) => (
             <article
               key={leader.id}
               className={`group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-1 ${
