@@ -1,34 +1,32 @@
 import { useEffect, useState } from "react";
 import { Phone, Quote } from "lucide-react";
+import agreyPhoto from "@/assets/leader-agrey.png";
+import sharonPhoto from "@/assets/leader-sharon.png";
 import { api } from "@/lib/api";
 
 const STATIC_LEADERS = [
   {
-    id: "1",
+    id: "static-1",
     name: "AGREY CHACHA",
     position: "Founder President",
     phone: "+254745523865",
-    photoUrl: null as string | null,
+    photoUrl: agreyPhoto,
     quote:
       "As the Founder President of Kuria West Student Association (KUWESA), I believe in the power of unity, education, and youth empowerment in transforming our society. KUWESA was founded to bring together students from all wards of Kuria West and create a platform for mentorship, leadership, academic growth, advocacy, and community service. Through this association, we aim to empower students, address social challenges such as GBV, FGM, and early marriages, and inspire a generation of responsible leaders committed to the progress and development of Kuria West. Together, we can build a stronger, united, and empowered community.",
   },
   {
-    id: "2",
+    id: "static-2",
     name: "SHARON OTAIGO",
     position: "Vice President",
     phone: "+254748207838",
-    photoUrl: null as string | null,
+    photoUrl: sharonPhoto,
     quote:
       "Every girl and every boy from our seven wards deserves a real chance — not just to be admitted, but to graduate, to lead, and to come back home and lift the next child. I joined KUWESA because I believe leadership is about opening doors so wide that no student is left outside. When we stand together as Kuria West, there is nothing we cannot achieve.",
   },
 ];
 
 const getInitials = (name: string) =>
-  name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
+  name.split(" ").map((n) => n[0]).join("").toUpperCase();
 
 export const Leadership = () => {
   const [leaders, setLeaders] = useState(STATIC_LEADERS);
@@ -41,7 +39,6 @@ export const Leadership = () => {
         if (Array.isArray(data) && data.length > 0) {
           setLeaders(
             data.map((l: any) => {
-              // Try to match with static data to get hardcoded quote
               const match = STATIC_LEADERS.find(
                 (ld) => ld.name.toLowerCase() === (l.name || "").toLowerCase()
               );
@@ -50,21 +47,19 @@ export const Leadership = () => {
                 name: l.name,
                 position: l.position,
                 phone: l.phone || null,
-                // Use DB photoUrl (Supabase URL) — fall back to null
-                photoUrl: l.photoUrl || l.image_url || null,
+                // Prefer Supabase URL from DB, then bundled photo, then null
+                photoUrl: l.photoUrl || l.image_url || match?.photoUrl || null,
                 quote: match?.quote || "",
               };
             })
           );
         }
-      } catch (e) {
-        console.log("Using fallback leaders");
-        setLeaders(STATIC_LEADERS);
+      } catch {
+        // Keep static fallback
       } finally {
         setLoading(false);
       }
     };
-
     fetchLeaders();
   }, []);
 
@@ -97,46 +92,31 @@ export const Leadership = () => {
                   idx % 2 === 0 ? "reveal-left" : "reveal-right"
                 }`}
               >
-                {/* Photo Section */}
                 <div className="relative h-96 overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20">
                   {leader.photoUrl ? (
                     <img
                       src={leader.photoUrl}
                       alt={leader.name}
-                      className="h-full w-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
+                      className="h-full w-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       loading="lazy"
-                      onError={(e) => {
-                        // If image fails to load, show initials fallback
-                        (e.target as HTMLImageElement).style.display = "none";
-                        const parent = (e.target as HTMLImageElement).parentElement;
-                        if (parent) {
-                          const div = document.createElement("div");
-                          div.className = "h-full w-full flex items-center justify-center";
-                          div.innerHTML = `<div class="text-6xl font-bold text-primary/30">${getInitials(leader.name)}</div>`;
-                          parent.appendChild(div);
-                        }
-                      }}
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center">
                       <div className="text-6xl font-bold text-primary/30">{getInitials(leader.name)}</div>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute bottom-4 left-6 right-6">
+                    <h3 className="font-display text-xl font-bold text-white">{leader.name}</h3>
+                    <p className="text-primary-foreground/80 text-sm font-medium">{leader.position}</p>
+                  </div>
                 </div>
 
-                {/* Content Section */}
-                <div className="p-8">
-                  <h3 className="font-display text-2xl font-bold text-foreground mb-2">{leader.name}</h3>
-                  <p className="text-primary font-semibold text-sm mb-6 flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-primary" />
-                    {leader.position}
-                  </p>
-
+                <div className="p-6">
                   {leader.quote && (
-                    <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl p-5 mb-6 border border-primary/10">
-                      <div className="flex gap-2 mb-3">
-                        <Quote className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
+                    <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl p-4 mb-5 border border-primary/10">
+                      <div className="flex gap-2">
+                        <Quote className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
                         <p className="text-sm text-foreground/80 leading-relaxed italic">{leader.quote}</p>
                       </div>
                     </div>
