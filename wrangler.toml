@@ -1,2 +1,4 @@
 name = "kuwesa"
 pages_build_output_dir = "artifacts/relationships/dist/public"
+
+[env.production]
