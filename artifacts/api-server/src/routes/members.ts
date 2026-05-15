@@ -4,9 +4,12 @@ import { requireAdmin } from "../middleware/requireAdmin.js";
 
 const router = Router();
 
-// Ensure all required columns exist
+// Drop blocking constraints + ensure all columns exist
 async function ensureColumns() {
-  const alters = [
+  const sqls = [
+    `ALTER TABLE members DROP CONSTRAINT IF EXISTS members_category_check`,
+    `ALTER TABLE members DROP CONSTRAINT IF EXISTS members_status_check`,
+    `ALTER TABLE members DROP CONSTRAINT IF EXISTS members_tier_check`,
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS tier text DEFAULT 'Member'`,
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS sub_county text`,
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS date_of_birth date`,
@@ -16,14 +19,18 @@ async function ensureColumns() {
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS skills text`,
     `ALTER TABLE members ADD COLUMN IF NOT EXISTS student_number text`,
   ];
-  for (const sql of alters) {
-    try { await pool.query(sql); } catch { /* already exists */ }
+  for (const sql of sqls) {
+    try { await pool.query(sql); } catch { /* ignore */ }
   }
 }
 
-// POST /api/members — create member (raw SQL, no Drizzle)
+// Run once on startup
+ensureColumns().catch(console.error);
+
+// POST /api/members
 router.post("/", async (req: Request, res: Response) => {
   try {
+    // Run again to make sure constraints are dropped before each insert
     await ensureColumns();
 
     const {
@@ -33,7 +40,7 @@ router.post("/", async (req: Request, res: Response) => {
       nextOfKinName, nextOfKinPhone, skills, tier,
     } = req.body;
 
-    console.log("[Members] Creating:", { fullName, phone, institution, tier });
+    console.log("[Members] Creating:", { fullName, phone, institution, tier, category });
 
     if (!fullName?.trim()) return res.status(400).json({ error: "Full name is required" });
     if (!phone?.trim())    return res.status(400).json({ error: "Phone number is required" });
@@ -47,11 +54,11 @@ router.post("/", async (req: Request, res: Response) => {
          next_of_kin_name, next_of_kin_phone, skills,
          tier, status)
        VALUES
-        ($1, $2, $3, $4, $5,
-         $6, $7, $8, $9,
-         $10, $11, $12,
-         $13, $14, $15,
-         $16, 'Pending Payment')
+        ($1,$2,$3,$4,$5,
+         $6,$7,$8,$9,
+         $10,$11,$12,
+         $13,$14,$15,
+         $16,'Pending Payment')
        RETURNING id, full_name`,
       [
         fullName.trim(),
@@ -87,33 +94,29 @@ router.post("/", async (req: Request, res: Response) => {
 // GET /api/members — admin only
 router.get("/", requireAdmin, async (_req: Request, res: Response) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT * FROM members ORDER BY joined_at DESC`
-    );
+    const { rows } = await pool.query(`SELECT * FROM members ORDER BY joined_at DESC`);
     return res.json(rows);
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }
 });
 
-// PATCH /api/members/:id/status — admin only
+// PATCH /api/members/:id/status
 router.patch("/:id/status", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
     const { status } = req.body;
     if (!status) return res.status(400).json({ error: "Status required" });
-    await pool.query(`UPDATE members SET status = $1 WHERE id = $2`, [status, id]);
+    await pool.query(`UPDATE members SET status=$1 WHERE id=$2`, [status, req.params.id]);
     return res.json({ ok: true });
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }
 });
 
-// DELETE /api/members/:id — admin only
+// DELETE /api/members/:id
 router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    await pool.query(`DELETE FROM members WHERE id = $1`, [id]);
+    await pool.query(`DELETE FROM members WHERE id=$1`, [req.params.id]);
     return res.json({ ok: true });
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
