@@ -29,38 +29,34 @@ const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase();
 
 export const Leadership = () => {
+  // Start with static leaders immediately — no loading spinner
   const [leaders, setLeaders] = useState(STATIC_LEADERS);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLeaders = async () => {
-      try {
-        const data = await api.get<any[]>("/leaders");
-        if (Array.isArray(data) && data.length > 0) {
-          setLeaders(
-            data.map((l: any) => {
-              const match = STATIC_LEADERS.find(
-                (ld) => ld.name.toLowerCase() === (l.name || "").toLowerCase()
-              );
-              return {
-                id: l.id,
-                name: l.name,
-                position: l.position,
-                phone: l.phone || null,
-                // Prefer Supabase URL from DB, then bundled photo, then null
-                photoUrl: l.photoUrl || l.image_url || match?.photoUrl || null,
-                quote: match?.quote || "",
-              };
-            })
-          );
-        }
-      } catch {
-        // Keep static fallback
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchLeaders();
+    // Fetch from DB in background — only update if DB has extra leaders
+    api.get<any[]>("/leaders")
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        setLeaders(
+          data.map((l: any) => {
+            const match = STATIC_LEADERS.find(
+              (ld) => ld.name.toLowerCase() === (l.name || "").toLowerCase()
+            );
+            return {
+              id: l.id,
+              name: l.name,
+              position: l.position,
+              phone: l.phone || null,
+              // Supabase URL takes priority, then bundled asset photo
+              photoUrl: l.photoUrl || l.image_url || match?.photoUrl || null,
+              quote: match?.quote || "",
+            };
+          })
+        );
+      })
+      .catch(() => {
+        // DB fetch failed — keep showing static leaders with bundled photos
+      });
   }, []);
 
   return (
@@ -79,63 +75,58 @@ export const Leadership = () => {
           </p>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {leaders.map((leader, idx) => (
-              <article
-                key={leader.id}
-                className={`group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-1 ${
-                  idx % 2 === 0 ? "reveal-left" : "reveal-right"
-                }`}
-              >
-                <div className="relative h-96 overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20">
-                  {leader.photoUrl ? (
-                    <img
-                      src={leader.photoUrl}
-                      alt={leader.name}
-                      className="h-full w-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center">
-                      <div className="text-6xl font-bold text-primary/30">{getInitials(leader.name)}</div>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  <div className="absolute bottom-4 left-6 right-6">
-                    <h3 className="font-display text-xl font-bold text-white">{leader.name}</h3>
-                    <p className="text-primary-foreground/80 text-sm font-medium">{leader.position}</p>
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {leaders.map((leader, idx) => (
+            <article
+              key={leader.id}
+              className={`group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-1 ${
+                idx % 2 === 0 ? "reveal-left" : "reveal-right"
+              }`}
+            >
+              {/* Photo */}
+              <div className="relative h-96 overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20">
+                {leader.photoUrl ? (
+                  <img
+                    src={leader.photoUrl}
+                    alt={leader.name}
+                    className="h-full w-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <div className="text-6xl font-bold text-primary/30">{getInitials(leader.name)}</div>
                   </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute bottom-4 left-6 right-6">
+                  <h3 className="font-display text-xl font-bold text-white drop-shadow">{leader.name}</h3>
+                  <p className="text-white/80 text-sm font-medium">{leader.position}</p>
                 </div>
+              </div>
 
-                <div className="p-6">
-                  {leader.quote && (
-                    <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl p-4 mb-5 border border-primary/10">
-                      <div className="flex gap-2">
-                        <Quote className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
-                        <p className="text-sm text-foreground/80 leading-relaxed italic">{leader.quote}</p>
-                      </div>
+              {/* Content */}
+              <div className="p-6">
+                {leader.quote && (
+                  <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl p-4 mb-5 border border-primary/10">
+                    <div className="flex gap-2">
+                      <Quote className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
+                      <p className="text-sm text-foreground/80 leading-relaxed italic">{leader.quote}</p>
                     </div>
-                  )}
-
-                  {leader.phone && (
-                    <a
-                      href={`tel:${leader.phone}`}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-all font-semibold text-sm shadow-md hover:shadow-lg"
-                    >
-                      <Phone className="h-4 w-4" />
-                      {leader.phone}
-                    </a>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+                  </div>
+                )}
+                {leader.phone && (
+                  <a
+                    href={`tel:${leader.phone}`}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-all font-semibold text-sm shadow-md hover:shadow-lg"
+                  >
+                    <Phone className="h-4 w-4" />
+                    {leader.phone}
+                  </a>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );
