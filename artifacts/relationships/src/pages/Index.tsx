@@ -3,6 +3,7 @@ import { Hero } from "@/components/Hero";
 import { About } from "@/components/About";
 import { Programs } from "@/components/Programs";
 import { Leadership } from "@/components/Leadership";
+import { Events } from "@/components/Events";
 import { Announcements } from "@/components/Announcements";
 import { Membership } from "@/components/Membership";
 import { Welfare } from "@/components/Welfare";
@@ -17,6 +18,7 @@ export default function Index() {
       <About />
       <Programs />
       <Leadership />
+      <Events />
       <Announcements />
       <Membership />
       <Welfare />
