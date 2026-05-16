@@ -1,59 +1,37 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import path from "path";
-import fs from "fs";
 import crypto from "crypto";
 
-const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "leader-photos";
-
-let supabase: SupabaseClient | null = null;
-function getSupabase(): SupabaseClient | null {
-  if (supabase) return supabase;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  supabase = createClient(url, key, { auth: { persistSession: false } });
-  return supabase;
-}
-
-export function isSupabaseStorageConfigured() {
-  return !!getSupabase();
-}
-
+// Safe upload — returns a placeholder URL if Supabase not configured
 export async function uploadLeaderPhoto(
   buffer: Buffer,
   originalName: string,
-  mimetype: string
+  mimeType: string
 ): Promise<string> {
-  const ext = path.extname(originalName) || ".jpg";
-  const filename = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`;
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const BUCKET       = process.env.SUPABASE_STORAGE_BUCKET || "leader-photos";
 
-  const sb = getSupabase();
-  if (sb) {
-    // Ensure bucket exists (best-effort) and upload publicly readable file.
-    try {
-      const { data: buckets } = await sb.storage.listBuckets();
-      if (!buckets?.some((b) => b.name === BUCKET)) {
-        await sb.storage.createBucket(BUCKET, { public: true });
-      }
-    } catch {
-      // ignore — createBucket may fail on permission, upload still works if it exists
-    }
-
-    const { error } = await sb.storage
-      .from(BUCKET)
-      .upload(`leaders/${filename}`, buffer, {
-        contentType: mimetype,
-        upsert: false,
-      });
-    if (error) throw new Error(`Supabase upload failed: ${error.message}`);
-
-    const { data } = sb.storage.from(BUCKET).getPublicUrl(`leaders/${filename}`);
-    return data.publicUrl;
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.warn("[Storage] Supabase not configured — photo upload skipped");
+    return ""; // Return empty so fallback photo is used
   }
 
-  // Fallback: local disk (Replit dev only — not Vercel).
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "leaders");
-  fs.mkdirSync(uploadDir, { recursive: true });
-  fs.writeFileSync(path.join(uploadDir, filename), buffer);
-  return `/uploads/leaders/${filename}`;
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const ext      = path.extname(originalName) || ".jpg";
+    const fileName = `leader-${crypto.randomUUID()}${ext}`;
+
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .upload(fileName, buffer, { contentType: mimeType, upsert: true });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+    return data.publicUrl;
+  } catch (e: any) {
+    console.error("[Storage] Upload failed:", e.message);
+    return "";
+  }
 }
