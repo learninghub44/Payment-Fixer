@@ -1,228 +1,215 @@
 import { Router, Request, Response } from "express";
-import { pool } from "../db.js";
+import { db } from "../db.js";
+import { payments } from "../shared/schema.js";
+import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
 const router = Router();
-const PESAPAL_BASE = "https://pay.pesapal.com/v3";
 
-function getFrontendBase() {
-  return process.env.FRONTEND_URL || "https://kuriaweststudents.pages.dev";
-}
-function getBackendBase() {
-  return process.env.RENDER_EXTERNAL_URL || process.env.APP_BASE_URL || "https://kuwesa-payment-api.onrender.com";
+// Pesapal credentials (from environment)
+const CONSUMER_KEY = process.env.PESAPAL_CONSUMER_KEY || "";
+const CONSUMER_SECRET = process.env.PESAPAL_CONSUMER_SECRET || "";
+const PESAPAL_ENV = process.env.PESAPAL_ENV || "sandbox";
+const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:10000";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// Pesapal API endpoints
+const PESAPAL_API = {
+  sandbox: {
+    auth: "https://pesapalapi.azurewebsites.net/api/Auth/RequestToken",
+    order: "https://pesapalapi.azurewebsites.net/api/Transactions/InitiatePayment",
+    status: "https://pesapalapi.azurewebsites.net/api/Transactions/GetTransactionStatus",
+  },
+  live: {
+    auth: "https://api.pesapal.com/api/Auth/RequestToken",
+    order: "https://api.pesapal.com/api/Transactions/InitiatePayment",
+    status: "https://api.pesapal.com/api/Transactions/GetTransactionStatus",
+  },
+};
+
+const pesapalAPI = PESAPAL_API[PESAPAL_ENV as keyof typeof PESAPAL_API];
+
+// Generate unique merchant reference
+function generateMerchantReference(): string {
+  return `KUWESA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// Get Pesapal auth token
 async function getPesapalToken(): Promise<string> {
-  const res = await fetch(`${PESAPAL_BASE}/api/Auth/RequestToken`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      consumer_key: process.env.PESAPAL_CONSUMER_KEY,
-      consumer_secret: process.env.PESAPAL_CONSUMER_SECRET,
-    }),
-    signal: AbortSignal.timeout(15000),
-  });
-  const data = await res.json();
-  if (!data.token) throw new Error(`Pesapal auth failed: ${JSON.stringify(data)}`);
-  return data.token;
-}
-
-async function registerIPN(token: string): Promise<string> {
   try {
-    const ipnUrl = `${getBackendBase()}/api/payments/ipn`;
-    const res = await fetch(`${PESAPAL_BASE}/api/URLSetup/RegisterIPN`, {
+    const response = await fetch(pesapalAPI.auth, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ url: ipnUrl, ipn_notification_type: "GET" }),
-      signal: AbortSignal.timeout(10000),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        consumer_key: CONSUMER_KEY,
+        consumer_secret: CONSUMER_SECRET,
+      }),
     });
-    const data = await res.json();
-    return data.ipn_id || "";
-  } catch (e) {
-    console.error("[IPN] Registration error:", e);
-    return "";
+
+    const data = await response.json();
+    return data.token;
+  } catch (error) {
+    console.error("Pesapal token error:", error);
+    throw new Error("Failed to authenticate with Pesapal");
   }
 }
 
-// Ensure payments table has all columns
-async function ensurePaymentsTable() {
-  try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS payments (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      purpose text NOT NULL DEFAULT 'membership',
-      member_id uuid,
-      campaign_id uuid,
-      payer_name text NOT NULL DEFAULT '',
-      payer_phone text NOT NULL DEFAULT '',
-      payer_email text,
-      amount numeric NOT NULL DEFAULT 0,
-      currency text NOT NULL DEFAULT 'KES',
-      merchant_reference text UNIQUE,
-      pesapal_tracking_id text,
-      pesapal_redirect_url text,
-      status text NOT NULL DEFAULT 'PENDING',
-      raw_callback jsonb,
-      created_at timestamp DEFAULT now(),
-      updated_at timestamp DEFAULT now()
-    )`);
-  } catch { /* already exists */ }
-}
-
-// POST /api/payments/create
+// Create payment
 router.post("/create", async (req: Request, res: Response) => {
   try {
-    await ensurePaymentsTable();
+    const {
+      memberId,
+      amount,
+      purpose,
+      payerName,
+      payerPhone,
+      payerEmail,
+      currency = "KES",
+    } = req.body;
 
-    const { purpose, memberId, campaignId, amount, payerName, payerPhone, payerEmail, description } = req.body;
-
-    console.log("[Payments] Create:", { purpose, amount, payerName, payerPhone });
-
-    if (!purpose || !amount || !payerName || !payerPhone) {
-      return res.status(400).json({ error: "Missing required fields: purpose, amount, payerName, payerPhone" });
+    // Validate input
+    if (!amount || !payerName || !payerPhone || !payerEmail) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        message: "amount, payerName, payerPhone, and payerEmail are required",
+      });
     }
-    if (!process.env.PESAPAL_CONSUMER_KEY || !process.env.PESAPAL_CONSUMER_SECRET) {
-      return res.status(500).json({ error: "Pesapal keys not configured on server" });
-    }
 
-    const merchantRef = crypto.randomUUID();
-    const amountNum = parseFloat(String(amount));
+    // Generate merchant reference
+    const merchantReference = generateMerchantReference();
 
     // Get Pesapal token
     const token = await getPesapalToken();
 
-    // Register IPN
-    const ipnId = await registerIPN(token);
+    // Create order description
+    const orderDescription = purpose || `KUWESA Membership Payment - ${amount} ${currency}`;
 
-    // Save pending payment
-    await pool.query(
-      `INSERT INTO payments (purpose, member_id, campaign_id, payer_name, payer_phone, payer_email, amount, currency, merchant_reference, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'KES', $8, 'PENDING')`,
-      [purpose, memberId || null, campaignId || null, payerName, payerPhone, payerEmail || null, amountNum, merchantRef]
-    );
+    // Pesapal callback URLs
+    const callbackUrl = `${APP_BASE_URL}/api/payments/ipn`;
+    const redirectUrl = `${FRONTEND_URL}/payment/callback`;
 
-    // Submit to Pesapal
-    const frontendBase = getFrontendBase();
-    const orderRes = await fetch(`${PESAPAL_BASE}/api/Transactions/SubmitOrderRequest`, {
+    // Create payment in Pesapal
+    const pesapalResponse = await fetch(pesapalAPI.order, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
-        id: merchantRef,
-        currency: "KES",
-        amount: amountNum,
-        description: description || purpose,
-        callback_url: `${frontendBase}/payment/success?ref=${merchantRef}`,
-        cancellation_url: `${frontendBase}/payment/failed?ref=${merchantRef}`,
-        notification_id: ipnId,
-        billing_address: {
-          email_address: payerEmail || "noemail@kuwesa.local",
-          phone_number: payerPhone,
-          first_name: payerName.split(" ")[0] || "Student",
-          last_name: payerName.split(" ").slice(1).join(" ") || "KUWESA",
-        },
+        consumer_key: CONSUMER_KEY,
+        consumer_secret: CONSUMER_SECRET,
+        merchant_reference: merchantReference,
+        amount: String(amount),
+        currency: currency,
+        description: orderDescription,
+        callback_url: callbackUrl,
+        redirect_url: redirectUrl,
+        first_name: payerName.split(" ")[0],
+        last_name: payerName.split(" ").slice(1).join(" "),
+        email: payerEmail,
+        phone_number: payerPhone,
       }),
-      signal: AbortSignal.timeout(20000),
     });
 
-    const orderData = await orderRes.json();
-    console.log("[Payments] Pesapal response:", orderData);
+    const pesapalData = await pesapalResponse.json();
 
-    if (!orderData.redirect_url) {
-      throw new Error(orderData.error?.message || orderData.message || "No redirect URL from Pesapal");
+    if (!pesapalResponse.ok) {
+      console.error("Pesapal error:", pesapalData);
+      return res.status(400).json({
+        error: "Payment initiation failed",
+        message: pesapalData.message || "Failed to create payment order",
+      });
     }
 
-    // Update with tracking ID
-    await pool.query(
-      `UPDATE payments SET pesapal_tracking_id=$1, pesapal_redirect_url=$2 WHERE merchant_reference=$3`,
-      [orderData.order_tracking_id || null, orderData.redirect_url, merchantRef]
-    );
+    // Save payment record to database
+    const paymentRecord = await db
+      .insert(payments)
+      .values({
+        purpose: purpose || orderDescription,
+        memberId: memberId || null,
+        payerName,
+        payerPhone,
+        payerEmail,
+        amount: String(amount),
+        currency,
+        merchantReference,
+        pesapalTrackingId: pesapalData.order_tracking_id || "",
+        pesapalRedirectUrl: pesapalData.redirect_url || "",
+        status: "Pending",
+      })
+      .returning();
 
-    return res.json({
-      redirect_url: orderData.redirect_url,
-      merchant_reference: merchantRef,
-      order_tracking_id: orderData.order_tracking_id,
+    // Return success with redirect URL
+    res.status(200).json({
+      success: true,
+      message: "Payment initiated successfully",
+      redirect_url: pesapalData.redirect_url || redirectUrl,
+      pesapal_url: pesapalData.redirect_url || redirectUrl,
+      merchant_reference: merchantReference,
+      order_tracking_id: pesapalData.order_tracking_id,
+      payment: paymentRecord[0],
     });
-  } catch (err: any) {
-    console.error("[Payments] Error:", err.message);
-    return res.status(500).json({ error: err.message });
+  } catch (error: any) {
+    console.error("Payment creation error:", error);
+    res.status(500).json({
+      error: "Payment initiation failed",
+      message: error.message || "An error occurred while creating the payment",
+    });
   }
 });
 
-// GET /api/payments/status
-router.get("/status", async (req: Request, res: Response) => {
+// IPN Webhook handler
+router.post("/ipn", async (req: Request, res: Response) => {
   try {
-    const ref = String(req.query.merchantReference || "");
-    if (!ref) return res.status(400).json({ error: "merchantReference required" });
-    const { rows } = await pool.query(`SELECT * FROM payments WHERE merchant_reference=$1`, [ref]);
-    if (!rows.length) return res.status(404).json({ error: "Payment not found" });
-    return res.json({ status: rows[0].status, payment: rows[0] });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
-  }
-});
+    const { order_tracking_id, status, merchant_reference } = req.body;
 
-// GET /api/payments/ipn — Pesapal webhook
-router.get("/ipn", async (req: Request, res: Response) => {
-  try {
-    console.log("[IPN] Received:", req.query);
-    const orderTrackingId = String(req.query.OrderTrackingId || "");
-    const merchantRef = String(req.query.OrderMerchantReference || "");
-
-    if (!merchantRef) return res.status(200).json({ message: "ok" });
-
-    let pesapalStatus = "COMPLETED";
-    try {
-      const token = await getPesapalToken();
-      const verifyRes = await fetch(
-        `${PESAPAL_BASE}/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`,
-        { headers: { Accept: "application/json", Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) }
-      );
-      const v = await verifyRes.json();
-      console.log("[IPN] Verify:", v);
-      const desc = (v.payment_status_description || "").toLowerCase();
-      if (desc === "completed") pesapalStatus = "COMPLETED";
-      else if (desc === "failed" || desc === "invalid") pesapalStatus = "FAILED";
-      else pesapalStatus = "PENDING";
-    } catch { /* keep COMPLETED as default */ }
-
-    // Get payment record
-    const { rows } = await pool.query(`SELECT * FROM payments WHERE merchant_reference=$1`, [merchantRef]);
-    if (!rows.length) return res.status(200).json({ message: "ok" });
-    const payment = rows[0];
+    if (!order_tracking_id) {
+      return res.status(400).json({ error: "Missing order_tracking_id" });
+    }
 
     // Update payment status
-    await pool.query(
-      `UPDATE payments SET status=$1, pesapal_tracking_id=$2, raw_callback=$3, updated_at=now() WHERE merchant_reference=$4`,
-      [pesapalStatus, orderTrackingId || payment.pesapal_tracking_id, JSON.stringify(req.query), merchantRef]
-    );
+    await db
+      .update(payments)
+      .set({
+        status: status || "Completed",
+        pesapalTrackingId: order_tracking_id,
+        rawCallback: JSON.stringify(req.body),
+      })
+      .where(eq(payments.merchantReference, merchant_reference));
 
-    if (pesapalStatus === "COMPLETED") {
-      if (payment.member_id) {
-        await pool.query(`UPDATE members SET status='Paid' WHERE id=$1`, [payment.member_id]);
-        console.log("[IPN] ✓ Member marked Paid:", payment.member_id);
-      }
-      if (payment.campaign_id) {
-        await pool.query(
-          `UPDATE welfare_campaigns SET raised_amount = raised_amount + $1 WHERE id=$2`,
-          [Number(payment.amount), payment.campaign_id]
-        );
-        console.log("[IPN] ✓ Welfare campaign updated:", payment.campaign_id);
-      }
-    }
-
-    return res.status(200).json({ message: "ok", status: pesapalStatus });
-  } catch (e: any) {
-    console.error("[IPN] Error:", e.message);
-    return res.status(200).json({ message: "ok" });
+    res.status(200).json({ success: true, message: "IPN received" });
+  } catch (error) {
+    console.error("IPN error:", error);
+    res.status(500).json({ error: "IPN processing failed" });
   }
 });
 
-// GET /api/payments — admin list
-router.get("/", async (_req: Request, res: Response) => {
+// Get payment status
+router.get("/status/:merchantReference", async (req: Request, res: Response) => {
   try {
-    const { rows } = await pool.query(`SELECT * FROM payments ORDER BY created_at DESC`);
-    return res.json(rows);
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
+    const { merchantReference } = req.params;
+
+    const payment = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.merchantReference, merchantReference))
+      .limit(1);
+
+    if (payment.length === 0) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
+
+    res.json({
+      status: payment[0].status,
+      merchant_reference: payment[0].merchantReference,
+      amount: payment[0].amount,
+      currency: payment[0].currency,
+    });
+  } catch (error) {
+    console.error("Status check error:", error);
+    res.status(500).json({ error: "Failed to check payment status" });
   }
 });
 

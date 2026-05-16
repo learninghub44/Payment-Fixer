@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 
 const WARDS = [
-  "Nyamosense/Komosoko",
-  "Butuburke/Masaba",
-  "Iramba",
-  "Matwere",
-  "Chacha/Wanjala",
-  "Magutu/Makongo",
-  "Silibwet",
+  "Bukira East",
+  "Bukira Central / Ikerege",
+  "Isibania",
+  "Makerero",
+  "Masaba",
+  "Tagare",
+  "Nyamosense / Komosoko",
 ];
 
 type RegistrationStep = 1 | 2 | 3 | 4 | 5;
