@@ -86,13 +86,24 @@ export const Membership = () => {
       }
     } catch (err: any) {
       const msg: string = err?.message || "Please try again";
-      const isDuplicate = msg.includes("duplicate") || msg.includes("already") ||
-                          msg.includes("unique") || msg.includes("23505") ||
-                          msg.toLowerCase().includes("phone") || msg.toLowerCase().includes("exists");
-      const isSleep = msg.includes("502") || msg.includes("503") || msg.includes("fetch");
+      // Only show "already exists" for actual DB unique constraint errors
+      const isDuplicate = msg.includes("23505") || 
+                          msg.includes("duplicate key") ||
+                          (msg.includes("unique") && msg.includes("constraint"));
+      const isSleep = msg.includes("502") || msg.includes("503") || 
+                      msg.includes("Failed to fetch") || msg.includes("NetworkError");
+      const isPesapalError = msg.toLowerCase().includes("pesapal") || 
+                             msg.toLowerCase().includes("payment initiation") ||
+                             msg.toLowerCase().includes("redirect url");
 
       if (isDuplicate) {
         setAlreadyExists(true);
+      } else if (isPesapalError) {
+        toast({
+          title: "Payment Gateway Error",
+          description: "Registration saved but payment could not be initiated. Please contact KUWESA leadership to complete your payment manually.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: isSleep ? "Server is starting up…" : "Registration Failed",
