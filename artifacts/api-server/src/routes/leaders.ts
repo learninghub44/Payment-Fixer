@@ -58,3 +58,14 @@ router.patch("/:id/photo", requireAdmin, async (req: Request, res: Response) => 
 });
 
 export default router;
+
+// DELETE /api/leaders/:id
+router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`DELETE FROM leaders WHERE id=$1 RETURNING id`, [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Leader not found" });
+    return res.json({ ok: true });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});

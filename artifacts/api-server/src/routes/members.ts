@@ -177,3 +177,18 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
 });
 
 export default router;
+
+// DELETE /api/members/:id
+router.delete("/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: "ID required" });
+    const result = await pool.query(`DELETE FROM members WHERE id=$1 RETURNING id`, [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Member not found" });
+    console.log("[Members] Deleted:", id);
+    return res.json({ ok: true });
+  } catch (e: any) {
+    console.error("[Members] Delete error:", e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
