@@ -6,7 +6,7 @@ import { Leadership } from "@/components/Leadership";
 import { Announcements } from "@/components/Announcements";
 import { Membership } from "@/components/Membership";
 import { Welfare } from "@/components/Welfare";
-import { Gallery } from "@/components/Gallery";
+import { EventsTeaser } from "@/components/EventsTeaser";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
 
@@ -21,7 +21,7 @@ export default function Index() {
       <Announcements />
       <Membership />
       <Welfare />
-      <Gallery />
+      <EventsTeaser />
       <Contact />
       <Footer />
     </div>

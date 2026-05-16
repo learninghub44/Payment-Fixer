@@ -12,6 +12,7 @@ import PaymentFailed from "./pages/PaymentFailed.tsx";
 import PaymentCallback from "./pages/PaymentCallback.tsx";
 import MemberLogin from "./pages/MemberLogin.tsx";
 import MemberDashboard from "./pages/MemberDashboard.tsx";
+import Events from "./pages/Events.tsx";
 import PaymentCancelled from "./pages/PaymentCancelled.tsx";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/payment/callback" element={<PaymentCallback />} />
           <Route path="/member/login" element={<MemberLogin />} />
           <Route path="/member/dashboard" element={<MemberDashboard />} />
+          <Route path="/events" element={<Events />} />
           <Route path="/payment/cancelled" element={<PaymentCancelled />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
