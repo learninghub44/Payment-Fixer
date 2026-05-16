@@ -2,18 +2,16 @@ import { Router, Request, Response } from "express";
 import { db } from "../db.js";
 import { payments } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
-import crypto from "crypto";
 
 const router = Router();
 
-// Pesapal credentials (from environment)
+// Pesapal credentials
 const CONSUMER_KEY = process.env.PESAPAL_CONSUMER_KEY || "";
 const CONSUMER_SECRET = process.env.PESAPAL_CONSUMER_SECRET || "";
 const PESAPAL_ENV = process.env.PESAPAL_ENV || "sandbox";
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:10000";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-// Pesapal API endpoints
 const PESAPAL_API = {
   sandbox: {
     auth: "https://pesapalapi.azurewebsites.net/api/Auth/RequestToken",
@@ -29,12 +27,10 @@ const PESAPAL_API = {
 
 const pesapalAPI = PESAPAL_API[PESAPAL_ENV as keyof typeof PESAPAL_API];
 
-// Generate unique merchant reference
 function generateMerchantReference(): string {
   return `KUWESA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Get Pesapal auth token
 async function getPesapalToken(): Promise<string> {
   try {
     const response = await fetch(pesapalAPI.auth, {
@@ -69,7 +65,6 @@ router.post("/create", async (req: Request, res: Response) => {
       currency = "KES",
     } = req.body;
 
-    // Validate input
     if (!amount || !payerName || !payerPhone || !payerEmail) {
       return res.status(400).json({
         error: "Missing required fields",
@@ -77,20 +72,12 @@ router.post("/create", async (req: Request, res: Response) => {
       });
     }
 
-    // Generate merchant reference
     const merchantReference = generateMerchantReference();
-
-    // Get Pesapal token
     const token = await getPesapalToken();
-
-    // Create order description
     const orderDescription = purpose || `KUWESA Membership Payment - ${amount} ${currency}`;
-
-    // Pesapal callback URLs
     const callbackUrl = `${APP_BASE_URL}/api/payments/ipn`;
     const redirectUrl = `${FRONTEND_URL}/payment/callback`;
 
-    // Create payment in Pesapal
     const pesapalResponse = await fetch(pesapalAPI.order, {
       method: "POST",
       headers: {
@@ -123,7 +110,7 @@ router.post("/create", async (req: Request, res: Response) => {
       });
     }
 
-    // Save payment record to database
+    // Save payment record
     const paymentRecord = await db
       .insert(payments)
       .values({
@@ -141,7 +128,6 @@ router.post("/create", async (req: Request, res: Response) => {
       })
       .returning();
 
-    // Return success with redirect URL
     res.status(200).json({
       success: true,
       message: "Payment initiated successfully",
@@ -169,7 +155,11 @@ router.post("/ipn", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing order_tracking_id" });
     }
 
-    // Update payment status
+    // Ensure merchant_reference is a string
+    const ref = Array.isArray(merchant_reference)
+      ? merchant_reference[0]
+      : merchant_reference;
+
     await db
       .update(payments)
       .set({
@@ -177,7 +167,7 @@ router.post("/ipn", async (req: Request, res: Response) => {
         pesapalTrackingId: order_tracking_id,
         rawCallback: JSON.stringify(req.body),
       })
-      .where(eq(payments.merchantReference, merchant_reference));
+      .where(eq(payments.merchantReference, ref));
 
     res.status(200).json({ success: true, message: "IPN received" });
   } catch (error) {
@@ -190,11 +180,16 @@ router.post("/ipn", async (req: Request, res: Response) => {
 router.get("/status/:merchantReference", async (req: Request, res: Response) => {
   try {
     const { merchantReference } = req.params;
+    
+    // Handle if merchantReference is an array
+    const ref = Array.isArray(merchantReference)
+      ? merchantReference[0]
+      : merchantReference;
 
     const payment = await db
       .select()
       .from(payments)
-      .where(eq(payments.merchantReference, merchantReference))
+      .where(eq(payments.merchantReference, ref))
       .limit(1);
 
     if (payment.length === 0) {

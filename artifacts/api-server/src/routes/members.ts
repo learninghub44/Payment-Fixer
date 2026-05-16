@@ -28,7 +28,7 @@ router.post("/", async (req: Request, res: Response) => {
     if (!institution?.trim()) errors.institution = "Institution is required";
     if (!county?.trim()) errors.county = "County is required";
 
-    // Phone format validation (Kenya +254 or 07/06)
+    // Phone format validation
     const phoneRegex = /^(\+254|0)[17][0-9]{8}$/;
     if (phone && !phoneRegex.test(phone.replace(/\s/g, ""))) {
       errors.phone = "Invalid phone number format. Use +254 or 07/06";
@@ -105,9 +105,7 @@ router.post("/", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Registration error:", error);
 
-    // Handle database constraint errors
     if (error.code === "23505") {
-      // Unique constraint violation
       const field = error.constraint?.includes("phone")
         ? "phone"
         : error.constraint?.includes("email")
@@ -154,10 +152,13 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Status is required" });
     }
 
+    // Ensure id is a string
+    const memberId = Array.isArray(id) ? id[0] : id;
+
     const updated = await db
       .update(members)
       .set({ status })
-      .where(eq(members.id, id))
+      .where(eq(members.id, memberId))
       .returning();
 
     if (updated.length === 0) {
