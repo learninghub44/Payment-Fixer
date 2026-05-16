@@ -1,78 +1,102 @@
-import express, { Express } from "express";
-import cookieParser from "cookie-parser";
+import "dotenv/config";
+import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { createClient } from "@supabase/supabase-js";
-
-import { setupSecurity, validateRequest, errorHandler } from "./middleware/security.js";
-import { requireAdmin } from "./middleware/requireAdmin.js";
-
+import cors from "cors";
+import { pool, ensureSchema } from "./db.js";
+import authRouter from "./routes/auth.js";
 import membersRouter from "./routes/members.js";
-import memberAuthRouter from "./routes/memberAuth.js";
-import leadersRouter from "./routes/leaders.js";
-import paymentsRouter from "./routes/payments.js";
 import announcementsRouter from "./routes/announcements.js";
-import campaignsRouter from "./routes/campaigns.js";
-import adminRouter from "./routes/admin.js";
+import leadersRouter from "./routes/leaders.js";
+import welfareRouter from "./routes/welfare.js";
+import paymentsRouter from "./routes/payments.js";
+import memberAuthRouter from "./routes/memberAuth.js";
 
-export function createApp(): Express {
+// Schema init
+let schemaReady: Promise<void> | null = null;
+function initSchemaOnce() {
+  if (!schemaReady) {
+    schemaReady = ensureSchema()
+      .then(() => console.log("✓ Schema ready"))
+      .catch((e) => { console.error("Schema error:", e.message); schemaReady = null; });
+  }
+  return schemaReady;
+}
+
+let cachedApp: express.Express | null = null;
+
+export function createApp(): express.Express {
+  if (cachedApp) return cachedApp;
   const app = express();
+  app.set("trust proxy", 1);
 
-  // Security setup
-  setupSecurity(app);
+  // CORS
+  app.use(cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (origin.endsWith(".pages.dev")) return cb(null, true);
+      if (origin.includes("kuriaweststudents")) return cb(null, true);
+      return cb(null, true);
+    },
+    credentials: true,
+  }));
 
-  // Parsers
-  app.use(express.json({ limit: "10kb" }));
-  app.use(express.urlencoded({ limit: "10kb", extended: true }));
-  app.use(cookieParser());
+  // Body parsing
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-  // Session
-  const supabase = createClient(
-    process.env.SUPABASE_URL || "",
-    process.env.SUPABASE_ANON_KEY || ""
-  );
+  // Sessions (memory store — safe for free tier)
+  app.use(session({
+    secret: process.env.SESSION_SECRET || "kuwesa-secret-2024",
+    resave: false,
+    saveUninitialized: false,
+    name: "kuwesa.sid",
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    },
+  }));
 
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "secret",
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === "production",
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: "strict",
-      },
-      store: new (require("connect-pg-simple")(session))({
-        conString: process.env.SUPABASE_DATABASE_URL,
-        tableName: "sessions",
-      }),
-    })
-  );
+  console.log("✓ Security middleware configured");
 
-  // Request validation
-  app.use(validateRequest);
-
-  // Health check
-  app.get("/api/healthz", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  // Schema init on every request
+  app.use(async (_req, _res, next) => {
+    try { await initSchemaOnce(); } catch { /* continue */ }
+    next();
   });
 
-  // API Routes
+  // Health routes
+  app.get("/api/healthz", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+  app.get("/api/wake-up", (_req, res) => res.json({ awake: true, ts: new Date().toISOString() }));
+  app.get("/api/test-db", async (_req, res) => {
+    try {
+      const r = await pool.query("SELECT NOW() as time");
+      res.json({ database: "connected", time: r.rows[0].time });
+    } catch (e: any) {
+      res.status(500).json({ database: "error", error: e.message });
+    }
+  });
+
+  // Routes
+  app.use("/api/auth", authRouter);
   app.use("/api/members", membersRouter);
-  app.use("/api/member", memberAuthRouter);
-  app.use("/api/leaders", leadersRouter);
-  app.use("/api/payments", paymentsRouter);
   app.use("/api/announcements", announcementsRouter);
-  app.use("/api/campaigns", campaignsRouter);
-  app.use("/api/admin", adminRouter);
-
-  // 404 handler
-  app.use((req, res) => {
-    res.status(404).json({ error: "Not found" });
-  });
+  app.use("/api/leaders", leadersRouter);
+  app.use("/api/welfare", welfareRouter);
+  app.use("/api/payments", paymentsRouter);
+  app.use("/api/member", memberAuthRouter);
 
   // Error handler
-  app.use(errorHandler);
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error("Error:", err?.message);
+    res.status(err?.status || 500).json({ error: err?.message || "Internal server error" });
+  });
 
+  app.use((_req, res) => res.status(404).json({ error: "Not found" }));
+
+  cachedApp = app;
   return app;
 }
+
+initSchemaOnce();
