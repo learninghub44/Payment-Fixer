@@ -1,47 +1,61 @@
+import "dotenv/config";
 import { createApp } from "./app.js";
-import { db } from "./db.js";
-import { adminUsers, leaders } from "./shared/schema.js";
+import { pool } from "./db.js";
 import bcrypt from "bcryptjs";
 
-async function runSeedIfNeeded() {
+async function seedIfNeeded() {
   try {
-    // Admin
-    const existingAdmins = await db.select().from(adminUsers);
-    if (existingAdmins.length === 0) {
+    // Ensure admin table exists and seed admin
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        email text UNIQUE NOT NULL,
+        username text UNIQUE,
+        full_name text,
+        password_hash text NOT NULL,
+        role text DEFAULT 'admin',
+        status text DEFAULT 'active',
+        created_at timestamp DEFAULT now()
+      )
+    `);
+
+    const { rows: admins } = await pool.query(`SELECT id FROM admin_users LIMIT 1`);
+    if (admins.length === 0) {
       const hash = await bcrypt.hash("Facebook@2025", 12);
-      await db.insert(adminUsers).values({
-        email: "kuwesa23@gmail.com",
-        username: "kuwesa23",
-        fullName: "KUWESA Admin",
-        passwordHash: hash,
-        role: "admin",
-        status: "active",
-      }).onConflictDoNothing();
-      console.log("✓ Admin: kuwesa23@gmail.com / Facebook@2025");
+      await pool.query(
+        `INSERT INTO admin_users (email, username, full_name, password_hash, role, status)
+         VALUES ($1,$2,$3,$4,'admin','active') ON CONFLICT DO NOTHING`,
+        ["kuwesa23@gmail.com", "kuwesa23", "KUWESA Admin", hash]
+      );
+      console.log("✓ Admin seeded: kuwesa23@gmail.com / Facebook@2025");
     } else {
       console.log("✓ Admin exists");
     }
 
-    // Leaders
-    const existingLeaders = await db.select().from(leaders);
-    if (existingLeaders.length === 0) {
-      await db.insert(leaders).values([
-        {
-          name: "AGREY CHACHA",
-          position: "Founder President",
-          phone: "+254745523865",
-          sortOrder: 1,
-        },
-        {
-          name: "SHARON OTAIGO",
-          position: "Vice President",
-          phone: "+254748207838",
-          sortOrder: 2,
-        },
-      ]);
+    // Ensure leaders table and seed leaders
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS leaders (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        name text NOT NULL,
+        position text,
+        phone text,
+        image_url text,
+        sort_order integer DEFAULT 0,
+        created_at timestamp DEFAULT now()
+      )
+    `);
+
+    const { rows: lRows } = await pool.query(`SELECT id FROM leaders LIMIT 1`);
+    if (lRows.length === 0) {
+      await pool.query(`
+        INSERT INTO leaders (name, position, phone, sort_order) VALUES
+        ('AGREY CHACHA', 'Founder President', '+254745523865', 1),
+        ('SHARON OTAIGO', 'Vice President', '+254748207838', 2)
+        ON CONFLICT DO NOTHING
+      `);
       console.log("✓ Leaders seeded");
     } else {
-      console.log(`✓ Leaders exist (${existingLeaders.length})`);
+      console.log(`✓ Leaders exist (${lRows.length})`);
     }
   } catch (e: any) {
     console.error("Seed error:", e.message);
@@ -51,15 +65,9 @@ async function runSeedIfNeeded() {
 const app = createApp();
 const PORT = Number(process.env.PORT || 10000);
 
-if (!process.env.VERCEL) {
-  app.listen(PORT, "0.0.0.0", async () => {
-    console.log(`KUWESA server listening on port ${PORT}`);
-    const base =
-      process.env.APP_BASE_URL ||
-      `https://${(process.env.REPLIT_DOMAINS || "").split(",")[0]?.trim() || "localhost"}`;
-    console.log(`Pesapal IPN: ${base}/api/payments/ipn`);
-    await runSeedIfNeeded();
-  });
-}
+app.listen(PORT, "0.0.0.0", async () => {
+  console.log(`✓ KUWESA API running on port ${PORT}`);
+  await seedIfNeeded();
+});
 
 export default app;
