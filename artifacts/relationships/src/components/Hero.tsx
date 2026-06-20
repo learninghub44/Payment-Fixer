@@ -41,7 +41,7 @@ export const Hero = () => {
   return (
     <section
       id="home"
-      className="relative min-h-screen w-full overflow-hidden bg-green-950"
+      className="relative min-h-[100vh] sm:min-h-[110vh] w-full overflow-hidden bg-green-950"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -62,7 +62,7 @@ export const Hero = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/70" />
 
       {/* Content */}
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center text-center px-4 pt-20 pb-16">
+      <div className="relative z-10 flex min-h-[100vh] sm:min-h-[110vh] flex-col items-center justify-center text-center px-4 pt-20 pb-16">
         {/* Logo */}
         <div className="mb-6">
           <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full overflow-hidden bg-white shadow-2xl ring-4 ring-yellow-400/70 mx-auto">
@@ -107,13 +107,6 @@ export const Hero = () => {
               <div className="text-xs text-white/70 font-medium mt-0.5">{label}</div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Caption */}
-      <div className="absolute bottom-20 left-0 right-0 z-10 flex justify-center px-4">
-        <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white/80 text-xs text-center max-w-xs">
-          {SLIDES[current].caption}
         </div>
       </div>
 
