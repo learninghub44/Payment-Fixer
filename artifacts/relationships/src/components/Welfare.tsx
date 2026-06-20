@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, HandHeart, Loader2 } from "lucide-react";
+import { Heart, HandHeart, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
-import { createPesapalOrder, navigateToPesapal } from "@/lib/pesapal";
+import { createMpesaOrder, pollPaymentStatus } from "@/lib/mpesa";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -55,9 +55,14 @@ export const Welfare = () => {
     })();
   }, []);
 
+  const [stkSent, setStkSent] = useState(false);
+  const [paidOk, setPaidOk] = useState(false);
+
   const open = (c: Campaign) => {
     setActive(c);
     setForm({ name: "", phone: "", email: "", amount: "" });
+    setStkSent(false);
+    setPaidOk(false);
   };
 
   const contribute = async () => {
@@ -69,7 +74,7 @@ export const Welfare = () => {
     }
     setBusy(true);
     try {
-      const order = await createPesapalOrder({
+      const order = await createMpesaOrder({
         purpose: "welfare",
         campaignId: active.id,
         amount: amt,
@@ -78,12 +83,26 @@ export const Welfare = () => {
         payerEmail: form.email,
         description: `Welfare: ${active.title}`,
       });
-      navigateToPesapal(order.redirect_url);
+      setStkSent(true);
+      toast({ title: "Check your phone", description: "Enter your M-Pesa PIN to complete the contribution." });
+
+      const status = await pollPaymentStatus(order.merchant_reference);
+      if (status === "COMPLETED") {
+        setPaidOk(true);
+        toast({ title: "Thank you!", description: "Your contribution was received." });
+      } else if (status === "FAILED") {
+        setStkSent(false);
+        toast({ title: "Payment not completed", description: "The M-Pesa request was cancelled or timed out. Please try again.", variant: "destructive" });
+      } else {
+        toast({ title: "Still processing", description: "We haven't received confirmation yet. You can check back shortly." });
+      }
     } catch (e: any) {
-      setBusy(false);
+      setStkSent(false);
       const errorMsg = e?.message || "Failed to start payment. Please try again.";
       toast({ title: "Payment error", description: errorMsg, variant: "destructive" });
       console.error("Payment initiation error:", e);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -98,7 +117,7 @@ export const Welfare = () => {
             Lend a hand to a <span className="text-primary">fellow student</span>
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg">
-            Welfare cases posted by leadership. Contribute any amount via Pesapal — every shilling goes directly to the cause.
+            Welfare cases posted by leadership. Contribute any amount via M-Pesa — every shilling goes directly to the cause.
           </p>
         </div>
 
@@ -144,15 +163,21 @@ export const Welfare = () => {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Contribute to {active?.title}</DialogTitle>
-                          <DialogDescription>Pay any amount via Pesapal — M-Pesa, card or bank.</DialogDescription>
+                          <DialogDescription>Pay any amount via M-Pesa.</DialogDescription>
                         </DialogHeader>
+                        {paidOk ? (
+                          <div className="py-6 text-center space-y-2">
+                            <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
+                            <p className="font-semibold text-foreground">Contribution received — thank you!</p>
+                          </div>
+                        ) : (
                         <div className="space-y-4 py-2">
                           <div className="space-y-2">
                             <Label htmlFor="w-name">Your Name</Label>
                             <Input id="w-name" value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="w-phone">Phone</Label>
+                            <Label htmlFor="w-phone">Phone (M-Pesa number)</Label>
                             <Input id="w-phone" type="tel" value={form.phone} onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value }))} />
                           </div>
                           <div className="space-y-2">
@@ -163,12 +188,20 @@ export const Welfare = () => {
                             <Label htmlFor="w-amount">Amount (KES)</Label>
                             <Input id="w-amount" type="number" min={10} value={form.amount} onChange={(e) => setForm((s) => ({ ...s, amount: e.target.value }))} />
                           </div>
+                          {stkSent && (
+                            <p className="text-xs text-center text-muted-foreground bg-secondary/40 rounded-lg p-2">
+                              📱 Check your phone and enter your M-Pesa PIN to finish.
+                            </p>
+                          )}
                         </div>
+                        )}
+                        {!paidOk && (
                         <DialogFooter>
                           <Button variant="hero" onClick={contribute} disabled={busy} className="w-full">
-                            {busy ? "Redirecting..." : `Pay KES ${form.amount || "0"}`}
+                            {busy ? (stkSent ? "Waiting for M-Pesa confirmation…" : "Sending request…") : `Pay KES ${form.amount || "0"}`}
                           </Button>
                         </DialogFooter>
+                        )}
                       </DialogContent>
                     </Dialog>
                   </div>

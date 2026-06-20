@@ -2,14 +2,19 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./shared/schema.js";
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
 const { Pool } = pg;
 
 const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
 if (!connectionString) throw new Error("No database URL. Set SUPABASE_DATABASE_URL.");
 
-export const pool = new Pool({ connectionString });
+// Supabase/managed Postgres requires SSL but typically uses a cert chain that
+// Node won't auto-verify. Scope the relaxed verification to THIS connection
+// only (never disable it process-wide — that would also weaken every other
+// HTTPS call the server makes, e.g. to the M-Pesa API).
+export const pool = new Pool({
+  connectionString,
+  ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false },
+});
 export const db = drizzle(pool, { schema });
 
 export async function ensureSchema() {
@@ -86,8 +91,9 @@ export async function ensureSchema() {
       amount numeric NOT NULL DEFAULT 0,
       currency text NOT NULL DEFAULT 'KES',
       merchant_reference text,
-      pesapal_tracking_id text,
-      pesapal_redirect_url text,
+      checkout_request_id text,
+      merchant_request_id text,
+      mpesa_receipt_number text,
       status text NOT NULL DEFAULT 'PENDING',
       raw_callback jsonb,
       created_at timestamp DEFAULT now(),
@@ -106,7 +112,7 @@ export async function ensureSchema() {
       WHERE table_name = 'payments' AND table_schema = 'public'
     `);
     const colNames = cols.rows.map((r: any) => r.column_name);
-    const needed = ['merchant_reference','pesapal_redirect_url','raw_callback','payer_name','payer_phone','currency','status'];
+    const needed = ['merchant_reference','checkout_request_id','raw_callback','payer_name','payer_phone','currency','status'];
     const missing = needed.filter(c => !colNames.includes(c));
     if (missing.length > 0) {
       console.log("Payments table missing columns:", missing, "— recreating...");
@@ -122,8 +128,9 @@ export async function ensureSchema() {
         amount numeric NOT NULL DEFAULT 0,
         currency text NOT NULL DEFAULT 'KES',
         merchant_reference text UNIQUE,
-        pesapal_tracking_id text,
-        pesapal_redirect_url text,
+        checkout_request_id text,
+        merchant_request_id text,
+        mpesa_receipt_number text,
         status text NOT NULL DEFAULT 'PENDING',
         raw_callback jsonb,
         created_at timestamp DEFAULT now(),
@@ -149,8 +156,9 @@ export async function ensureSchema() {
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS amount numeric`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS currency text DEFAULT 'KES'`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS merchant_reference text`,
-    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS pesapal_tracking_id text`,
-    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS pesapal_redirect_url text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS checkout_request_id text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS merchant_request_id text`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS mpesa_receipt_number text`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS status text DEFAULT 'PENDING'`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS raw_callback jsonb`,
     `ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT now()`,

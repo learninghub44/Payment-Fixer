@@ -12,7 +12,7 @@ export default function PaymentCallback() {
     const processingPayment = async () => {
       try {
         const orderTrackingId = searchParams.get("order_tracking_id");
-        const pesapalReference = searchParams.get("pesapal_reference");
+        const gatewayReference = searchParams.get("gateway_reference");
         const merchantReference = searchParams.get("merchant_reference");
 
         if (!orderTrackingId) {
@@ -26,7 +26,7 @@ export default function PaymentCallback() {
 
         // Check payment status
         const response = await fetch(
-          `/api/payments/status/${merchantReference || pesapalReference || orderTrackingId}`
+          `/api/payments/status?merchantReference=${merchantReference || gatewayReference || orderTrackingId}`
         );
         const data = await response.json();
 

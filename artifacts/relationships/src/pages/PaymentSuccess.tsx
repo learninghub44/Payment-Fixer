@@ -3,13 +3,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, MessageCircle, AlertTriangle } from "lucide-react";
-import { verifyPesapalStatus } from "@/lib/pesapal";
 import { api } from "@/lib/api";
 
 const PaymentSuccess = () => {
   const [params] = useSearchParams();
-  const merchantRef = params.get("ref") || params.get("OrderMerchantReference") || "";
-  const orderTrackingId = params.get("OrderTrackingId") || "";
+  const merchantRef = params.get("ref") || params.get("merchant_reference") || "";
   const [status, setStatus] = useState<"checking" | "completed" | "pending" | "failed" | "cancelled">("checking");
   const [purpose, setPurpose] = useState<string>("");
 
@@ -17,20 +15,16 @@ const PaymentSuccess = () => {
     (async () => {
       if (!merchantRef) { setStatus("failed"); return; }
       try {
-        if (orderTrackingId) {
-          await verifyPesapalStatus(orderTrackingId, merchantRef).catch(() => null);
-        }
-        const data = await api.get<{ status: string; purpose: string }>(`/payments/status?ref=${encodeURIComponent(merchantRef)}`);
+        const data = await api.get<{ status: string; purpose: string }>(`/payments/status?merchantReference=${encodeURIComponent(merchantRef)}`);
         setPurpose(data?.purpose || "");
         if (data?.status === "COMPLETED") setStatus("completed");
-        else if (data?.status === "FAILED" || data?.status === "INVALID" || data?.status === "REVERSED") setStatus("failed");
-        else if (data?.status === "CANCELLED") setStatus("cancelled");
+        else if (data?.status === "FAILED") setStatus("failed");
         else setStatus("pending");
       } catch {
         setStatus("failed");
       }
     })();
-  }, [merchantRef, orderTrackingId]);
+  }, [merchantRef]);
 
   return (
     <div className="min-h-screen bg-gradient-soft">
@@ -69,7 +63,7 @@ const PaymentSuccess = () => {
               <Loader2 className="h-14 w-14 text-accent mx-auto mb-4 animate-spin" />
               <h1 className="font-display text-2xl font-bold text-foreground mb-2">Payment is processing</h1>
               <p className="text-muted-foreground mb-6">
-                Pesapal hasn't confirmed your payment yet. This page will update automatically — or refresh in a minute.
+                M-Pesa hasn't confirmed your payment yet. This page will update automatically — or refresh in a minute.
               </p>
               <Button onClick={() => window.location.reload()} variant="hero" className="w-full mb-2">Refresh status</Button>
               <Link to="/"><Button variant="outline" className="w-full">Back to home</Button></Link>

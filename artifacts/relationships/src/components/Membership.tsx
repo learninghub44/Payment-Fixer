@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Check, ChevronRight, Loader2, Shield, Star, Crown, LogIn } from "lucide-react";
 import { api } from "@/lib/api";
+import { createMpesaOrder, pollPaymentStatus } from "@/lib/mpesa";
 import { useToast } from "@/hooks/use-toast";
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -27,6 +28,8 @@ export const Membership = () => {
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [alreadyExists, setAlreadyExists] = useState(false);
+  const [stkSent, setStkSent] = useState(false);
+  const [paidOk, setPaidOk] = useState(false);
   const [form, setForm] = useState<FormData>({
     fullName:"", phone:"", email:"", category:"Student", institution:"",
     county:"", course:"", yearOfStudy:"", gender:"", nextOfKinName:"",
@@ -67,22 +70,34 @@ export const Membership = () => {
       const member = await api.post<any>("/members", form);
       if (!member?.id) throw new Error("Registration failed — no member ID");
 
-      // Create payment
+      // Trigger M-Pesa STK push
       const fee = FEES[form.tier];
-      const payment = await api.post<any>("/payments/create", {
+      const order = await createMpesaOrder({
         purpose: "membership",
         memberId: member.id,
         payerName: form.fullName,
         payerPhone: form.phone,
-        payerEmail: form.email || null,
+        payerEmail: form.email || undefined,
         amount: fee,
         description: `${form.tier} Registration - KUWESA`,
       });
 
-      if (payment?.redirect_url) {
-        window.location.href = payment.redirect_url;
+      setStkSent(true);
+      toast({ title: "Check your phone", description: "Enter your M-Pesa PIN to complete registration." });
+
+      const status = await pollPaymentStatus(order.merchant_reference);
+      if (status === "COMPLETED") {
+        setPaidOk(true);
+        toast({ title: "Welcome to KUWESA!", description: "Your payment was received." });
+      } else if (status === "FAILED") {
+        setStkSent(false);
+        toast({
+          title: "Payment not completed",
+          description: "The M-Pesa request was cancelled or timed out. You're registered — just retry the payment from your member dashboard.",
+          variant: "destructive",
+        });
       } else {
-        throw new Error("No payment URL received from Pesapal");
+        toast({ title: "Still processing", description: "We haven't received confirmation yet. You can check your status by logging in shortly." });
       }
     } catch (err: any) {
       const msg: string = err?.message || "Please try again";
@@ -92,13 +107,13 @@ export const Membership = () => {
                           (msg.includes("unique") && msg.includes("constraint"));
       const isSleep = msg.includes("502") || msg.includes("503") || 
                       msg.includes("Failed to fetch") || msg.includes("NetworkError");
-      const isPesapalError = msg.toLowerCase().includes("pesapal") || 
-                             msg.toLowerCase().includes("payment initiation") ||
-                             msg.toLowerCase().includes("redirect url");
+      const isMpesaError = msg.toLowerCase().includes("m-pesa") || 
+                             msg.toLowerCase().includes("mpesa") ||
+                             msg.toLowerCase().includes("payment initiation");
 
       if (isDuplicate) {
         setAlreadyExists(true);
-      } else if (isPesapalError) {
+      } else if (isMpesaError) {
         toast({
           title: "Payment Gateway Error",
           description: "Registration saved but payment could not be initiated. Please contact KUWESA leadership to complete your payment manually.",
@@ -321,8 +336,18 @@ export const Membership = () => {
                   </div>
                 </div>
                 <p className="text-xs text-center text-gray-500 bg-green-50 rounded-lg p-3 border border-green-100">
-                  🔒 Secure payment via <strong>Pesapal</strong> — M-Pesa, Airtel Money, Visa & Mastercard
+                  🔒 Secure payment via <strong>M-Pesa</strong> STK push — enter your PIN on your phone
                 </p>
+                {stkSent && !paidOk && (
+                  <p className="text-xs text-center text-amber-700 bg-amber-50 rounded-lg p-3 border border-amber-100">
+                    📱 Check your phone and enter your M-Pesa PIN to finish.
+                  </p>
+                )}
+                {paidOk && (
+                  <p className="text-xs text-center text-green-700 bg-green-50 rounded-lg p-3 border border-green-200 font-semibold">
+                    ✅ Payment received — welcome to KUWESA!
+                  </p>
+                )}
               </div>
             )}
 
@@ -342,7 +367,7 @@ export const Membership = () => {
               ) : (
                 <button type="button" onClick={submit} disabled={loading}
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-all shadow-md disabled:opacity-50">
-                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Processing…</> : <>Pay KES {fee} & Register 🎉</>}
+                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> {stkSent ? "Waiting for M-Pesa…" : "Processing…"}</> : <>Pay KES {fee} & Register 🎉</>}
                 </button>
               )}
             </div>

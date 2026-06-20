@@ -111,7 +111,7 @@ export function createApp(): express.Express {
 
   app.use(cors({
     origin: (origin, cb) => {
-      // Allow no-origin (Pesapal IPN, curl, mobile apps)
+      // Allow no-origin (M-Pesa callback, curl, mobile apps)
       if (!origin) return cb(null, true);
       // Allow exact matches only
       if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);

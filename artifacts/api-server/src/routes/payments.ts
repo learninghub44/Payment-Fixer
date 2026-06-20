@@ -4,50 +4,66 @@ import crypto from "crypto";
 
 const router = Router();
 
-// ✅ Correct Pesapal v3 LIVE endpoints
-const PESAPAL_BASE = "https://pay.pesapal.com/v3";
+// ── M-Pesa Daraja config ────────────────────────────────────────────────────
+// Set these in your environment (Render dashboard / .env):
+//   MPESA_ENV               "sandbox" | "production"   (default: sandbox)
+//   MPESA_CONSUMER_KEY
+//   MPESA_CONSUMER_SECRET
+//   MPESA_SHORTCODE         Paybill / till number (sandbox default: 174379)
+//   MPESA_PASSKEY           Lipa Na M-Pesa Online passkey
+//   APP_BASE_URL / RENDER_EXTERNAL_URL   public URL of this backend, used to
+//                            build the callback URL Safaricom calls back on
+const MPESA_BASE =
+  process.env.MPESA_ENV === "production"
+    ? "https://api.safaricom.co.ke"
+    : "https://sandbox.safaricom.co.ke";
 
-function getFrontendBase() {
-  return process.env.FRONTEND_URL || "https://kuriaweststudents.pages.dev";
-}
 function getBackendBase() {
   return process.env.RENDER_EXTERNAL_URL || process.env.APP_BASE_URL || "https://kuwesa-payment-api.onrender.com";
 }
 
-async function getPesapalToken(): Promise<string> {
-  const key    = process.env.PESAPAL_CONSUMER_KEY;
-  const secret = process.env.PESAPAL_CONSUMER_SECRET;
-  if (!key || !secret) throw new Error("Pesapal keys not configured on server. Set PESAPAL_CONSUMER_KEY and PESAPAL_CONSUMER_SECRET in Render environment variables.");
-
-  const res = await fetch(`${PESAPAL_BASE}/api/Auth/RequestToken`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ consumer_key: key, consumer_secret: secret }),
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) throw new Error(`Pesapal auth HTTP ${res.status}`);
-  const data = await res.json();
-  if (!data.token) throw new Error(`Pesapal auth failed: ${JSON.stringify(data)}`);
-  console.log("[Pesapal] ✓ Token obtained");
-  return data.token;
+// Normalize a Kenyan phone number to the 2547XXXXXXXX format Daraja expects.
+function normalizePhone(raw: string): string {
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.startsWith("254")) return digits;
+  if (digits.startsWith("0")) return `254${digits.slice(1)}`;
+  if (digits.startsWith("7") || digits.startsWith("1")) return `254${digits}`;
+  return digits;
 }
 
-async function registerIPN(token: string): Promise<string> {
-  try {
-    const ipnUrl = `${getBackendBase()}/api/payments/ipn`;
-    const res = await fetch(`${PESAPAL_BASE}/api/URLSetup/RegisterIPN`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ url: ipnUrl, ipn_notification_type: "GET" }),
-      signal: AbortSignal.timeout(10000),
-    });
-    const data = await res.json();
-    console.log("[Pesapal] IPN registered:", data.ipn_id);
-    return data.ipn_id || "";
-  } catch (e: any) {
-    console.error("[Pesapal] IPN registration failed:", e.message);
-    return "";
+async function getMpesaToken(): Promise<string> {
+  const key = process.env.MPESA_CONSUMER_KEY;
+  const secret = process.env.MPESA_CONSUMER_SECRET;
+  if (!key || !secret) {
+    throw new Error("M-Pesa is not configured. Set MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET in your environment.");
   }
+  const auth = Buffer.from(`${key}:${secret}`).toString("base64");
+  const res = await fetch(`${MPESA_BASE}/oauth/v1/generate?grant_type=client_credentials`, {
+    method: "GET",
+    headers: { Authorization: `Basic ${auth}` },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`M-Pesa auth HTTP ${res.status}`);
+  const data = await res.json();
+  if (!data.access_token) throw new Error(`M-Pesa auth failed: ${JSON.stringify(data)}`);
+  return data.access_token;
+}
+
+function buildPassword(shortcode: string, passkey: string, timestamp: string) {
+  return Buffer.from(`${shortcode}${passkey}${timestamp}`).toString("base64");
+}
+
+function timestampNow() {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    d.getFullYear().toString() +
+    pad(d.getMonth() + 1) +
+    pad(d.getDate()) +
+    pad(d.getHours()) +
+    pad(d.getMinutes()) +
+    pad(d.getSeconds())
+  );
 }
 
 async function ensurePaymentsTable() {
@@ -62,8 +78,9 @@ async function ensurePaymentsTable() {
     amount numeric NOT NULL DEFAULT 0,
     currency text NOT NULL DEFAULT 'KES',
     merchant_reference text UNIQUE,
-    pesapal_tracking_id text,
-    pesapal_redirect_url text,
+    checkout_request_id text,
+    merchant_request_id text,
+    mpesa_receipt_number text,
     status text NOT NULL DEFAULT 'PENDING',
     raw_callback jsonb,
     created_at timestamp DEFAULT now(),
@@ -71,7 +88,7 @@ async function ensurePaymentsTable() {
   )`);
 }
 
-// POST /api/payments/create
+// POST /api/payments/create — initiates an M-Pesa STK Push (Lipa Na M-Pesa Online)
 router.post("/create", async (req: Request, res: Response) => {
   try {
     await ensurePaymentsTable();
@@ -83,61 +100,63 @@ router.post("/create", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing required fields: purpose, amount, payerName, payerPhone" });
     }
 
+    const shortcode = process.env.MPESA_SHORTCODE;
+    const passkey = process.env.MPESA_PASSKEY;
+    if (!shortcode || !passkey) {
+      return res.status(503).json({ error: "M-Pesa is not configured yet. Set MPESA_SHORTCODE and MPESA_PASSKEY in your environment." });
+    }
+
     const merchantRef = crypto.randomUUID();
-    const amountNum   = parseFloat(String(amount));
+    const amountNum = Math.round(parseFloat(String(amount)));
+    const phone = normalizePhone(payerPhone);
 
-    // 1. Get token
-    const token = await getPesapalToken();
-
-    // 2. Register IPN
-    const ipnId = await registerIPN(token);
-
-    // 3. Save pending payment
+    // 1. Save pending payment first so we have a row even if Daraja never calls back
     await pool.query(
       `INSERT INTO payments (purpose, member_id, campaign_id, payer_name, payer_phone, payer_email, amount, currency, merchant_reference, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,'KES',$8,'PENDING')`,
-      [purpose, memberId||null, campaignId||null, payerName, payerPhone, payerEmail||null, amountNum, merchantRef]
+      [purpose, memberId || null, campaignId || null, payerName, phone, payerEmail || null, amountNum, merchantRef]
     );
 
-    // 4. Submit to Pesapal
-    const frontendBase = getFrontendBase();
-    const orderRes = await fetch(`${PESAPAL_BASE}/api/Transactions/SubmitOrderRequest`, {
+    // 2. Get an access token and trigger the STK push
+    const token = await getMpesaToken();
+    const timestamp = timestampNow();
+    const password = buildPassword(shortcode, passkey, timestamp);
+
+    const stkRes = await fetch(`${MPESA_BASE}/mpesa/stkpush/v1/processrequest`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        id: merchantRef,
-        currency: "KES",
-        amount: amountNum,
-        description: description || purpose,
-        callback_url: `${frontendBase}/payment/success?ref=${merchantRef}`,
-        cancellation_url: `${frontendBase}/payment/failed?ref=${merchantRef}`,
-        notification_id: ipnId,
-        billing_address: {
-          email_address: payerEmail || "noemail@kuwesa.local",
-          phone_number: payerPhone,
-          first_name: payerName.split(" ")[0] || "Student",
-          last_name: payerName.split(" ").slice(1).join(" ") || "KUWESA",
-        },
+        BusinessShortCode: shortcode,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: "CustomerPayBillOnline",
+        Amount: amountNum,
+        PartyA: phone,
+        PartyB: shortcode,
+        PhoneNumber: phone,
+        CallBackURL: `${getBackendBase()}/api/payments/callback`,
+        AccountReference: merchantRef.slice(0, 12),
+        TransactionDesc: description || purpose,
       }),
       signal: AbortSignal.timeout(20000),
     });
 
-    const orderData = await orderRes.json();
-    console.log("[Payments] Pesapal response:", orderData);
+    const stkData = await stkRes.json();
+    console.log("[Payments] STK push response:", stkData);
 
-    if (!orderData.redirect_url) {
-      throw new Error(orderData.error?.message || orderData.message || "No redirect URL from Pesapal — check your Pesapal credentials and account status");
+    if (stkData.ResponseCode !== "0") {
+      throw new Error(stkData.errorMessage || stkData.ResponseDescription || "Failed to initiate M-Pesa STK push");
     }
 
     await pool.query(
-      `UPDATE payments SET pesapal_tracking_id=$1, pesapal_redirect_url=$2 WHERE merchant_reference=$3`,
-      [orderData.order_tracking_id||null, orderData.redirect_url, merchantRef]
+      `UPDATE payments SET checkout_request_id=$1, merchant_request_id=$2 WHERE merchant_reference=$3`,
+      [stkData.CheckoutRequestID || null, stkData.MerchantRequestID || null, merchantRef]
     );
 
     return res.json({
-      redirect_url: orderData.redirect_url,
       merchant_reference: merchantRef,
-      order_tracking_id: orderData.order_tracking_id,
+      checkout_request_id: stkData.CheckoutRequestID,
+      message: "STK push sent — enter your M-Pesa PIN on your phone to complete payment.",
     });
   } catch (err: any) {
     console.error("[Payments] Error:", err.message);
@@ -145,58 +164,65 @@ router.post("/create", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/payments/status
+// GET /api/payments/status — frontend polls this after triggering an STK push
 router.get("/status", async (req: Request, res: Response) => {
   try {
-    const ref = String(req.query.merchantReference || "");
+    const ref = String(req.query.merchantReference || req.query.ref || "");
     if (!ref) return res.status(400).json({ error: "merchantReference required" });
     const { rows } = await pool.query(`SELECT * FROM payments WHERE merchant_reference=$1`, [ref]);
     if (!rows.length) return res.status(404).json({ error: "Payment not found" });
-    return res.json({ status: rows[0].status, payment: rows[0] });
+    return res.json({ status: rows[0].status, purpose: rows[0].purpose, payment: rows[0] });
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }
 });
 
-// GET /api/payments/ipn — Pesapal webhook
-router.get("/ipn", async (req: Request, res: Response) => {
+// POST /api/payments/callback — Safaricom Daraja calls this once the customer
+// enters their PIN (or cancels / times out). This is the ONLY place a payment
+// is allowed to be marked COMPLETED — we never assume success.
+router.post("/callback", async (req: Request, res: Response) => {
+  // Always ack 200 so Safaricom doesn't retry, even if our own processing fails.
+  res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+
   try {
-    console.log("[IPN] Received:", req.query);
-    const orderTrackingId = String(req.query.OrderTrackingId || "");
-    const merchantRef     = String(req.query.OrderMerchantReference || "");
-    if (!merchantRef) return res.status(200).json({ message: "ok" });
+    const body = req.body?.Body?.stkCallback;
+    if (!body) { console.warn("[Callback] Unexpected payload shape"); return; }
 
-    let pesapalStatus = "COMPLETED";
-    try {
-      const token = await getPesapalToken();
-      const vRes  = await fetch(`${PESAPAL_BASE}/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`,
-        { headers: { Accept: "application/json", Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
-      const v = await vRes.json();
-      console.log("[IPN] Verify:", v);
-      const desc = (v.payment_status_description || "").toLowerCase();
-      if (desc === "completed") pesapalStatus = "COMPLETED";
-      else if (desc === "failed" || desc === "invalid") pesapalStatus = "FAILED";
-      else pesapalStatus = "PENDING";
-    } catch { /* default COMPLETED */ }
+    const checkoutRequestId = body.CheckoutRequestID;
+    const resultCode = body.ResultCode;
+    const resultDesc = body.ResultDesc;
 
-    const { rows } = await pool.query(`SELECT * FROM payments WHERE merchant_reference=$1`, [merchantRef]);
-    if (!rows.length) return res.status(200).json({ message: "ok" });
+    const { rows } = await pool.query(`SELECT * FROM payments WHERE checkout_request_id=$1`, [checkoutRequestId]);
+    if (!rows.length) { console.warn("[Callback] No payment found for", checkoutRequestId); return; }
     const payment = rows[0];
 
-    await pool.query(
-      `UPDATE payments SET status=$1, pesapal_tracking_id=$2, raw_callback=$3, updated_at=now() WHERE merchant_reference=$4`,
-      [pesapalStatus, orderTrackingId||payment.pesapal_tracking_id, JSON.stringify(req.query), merchantRef]
-    );
+    let status = "FAILED";
+    let mpesaReceipt: string | null = null;
 
-    if (pesapalStatus === "COMPLETED") {
-      if (payment.member_id)   await pool.query(`UPDATE members SET status='Paid' WHERE id=$1`, [payment.member_id]);
-      if (payment.campaign_id) await pool.query(`UPDATE welfare_campaigns SET raised_amount=raised_amount+$1 WHERE id=$2`, [Number(payment.amount), payment.campaign_id]);
+    if (resultCode === 0) {
+      status = "COMPLETED";
+      const items: any[] = body.CallbackMetadata?.Item || [];
+      const find = (name: string) => items.find((i) => i.Name === name)?.Value;
+      mpesaReceipt = find("MpesaReceiptNumber") || null;
+    } else {
+      // 1032 = user cancelled, 1037 = timeout, anything else = failure
+      status = "FAILED";
     }
 
-    return res.status(200).json({ message: "ok", status: pesapalStatus });
+    await pool.query(
+      `UPDATE payments SET status=$1, mpesa_receipt_number=$2, raw_callback=$3, updated_at=now() WHERE checkout_request_id=$4`,
+      [status, mpesaReceipt, JSON.stringify(body), checkoutRequestId]
+    );
+
+    console.log(`[Callback] ${checkoutRequestId} -> ${status} (${resultDesc})`);
+
+    if (status === "COMPLETED") {
+      if (payment.member_id) await pool.query(`UPDATE members SET status='Paid' WHERE id=$1`, [payment.member_id]);
+      if (payment.campaign_id)
+        await pool.query(`UPDATE welfare_campaigns SET raised_amount=raised_amount+$1 WHERE id=$2`, [Number(payment.amount), payment.campaign_id]);
+    }
   } catch (e: any) {
-    console.error("[IPN] Error:", e.message);
-    return res.status(200).json({ message: "ok" });
+    console.error("[Callback] Error:", e.message);
   }
 });
 
