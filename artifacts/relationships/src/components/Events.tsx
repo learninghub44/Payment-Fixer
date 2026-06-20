@@ -70,7 +70,7 @@ export const Events = () => {
         </div>
 
         {/* Image Carousel */}
-        <div className="relative h-96 sm:h-[500px] md:h-[600px] rounded-2xl overflow-hidden bg-gray-200 shadow-lg">
+        <div className="relative h-96 sm:h-[500px] md:h-[600px] rounded-2xl overflow-hidden bg-green-100 shadow-lg">
           {/* Images */}
           {EVENTS_IMAGES.map((img, idx) => (
             <img

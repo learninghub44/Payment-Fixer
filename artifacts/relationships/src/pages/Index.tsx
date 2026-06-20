@@ -9,8 +9,11 @@ import { Welfare } from "@/components/Welfare";
 import { EventsTeaser } from "@/components/EventsTeaser";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function Index() {
+  useScrollReveal();
+
   return (
     <div className="min-h-screen">
       <Navbar />

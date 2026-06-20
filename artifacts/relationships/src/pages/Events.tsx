@@ -83,21 +83,21 @@ export default function Events() {
   }, [lightbox, prev, next]);
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-green-950">
       <Navbar />
 
       {/* Hero */}
       <div className="pt-24 pb-12 px-4 text-center">
-        <Link to="/" className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm mb-6 transition-colors">
+        <Link to="/" className="inline-flex items-center gap-2 text-yellow-400 hover:text-yellow-300 text-sm mb-6 transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Home
         </Link>
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-900/50 border border-green-800/50 text-green-400 text-xs font-semibold tracking-widest uppercase mb-4">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-900/50 border border-green-800/50 text-yellow-400 text-xs font-semibold tracking-widest uppercase mb-4">
           <Camera className="h-3.5 w-3.5" /> Photo Gallery
         </div>
         <h1 className="text-4xl sm:text-5xl font-black text-white mb-3">
-          KUWESA <span className="text-green-400">Events</span>
+          KUWESA <span className="text-yellow-400">Events</span>
         </h1>
-        <p className="text-gray-400 max-w-xl mx-auto text-sm">
+        <p className="text-green-300/80 max-w-xl mx-auto text-sm">
           Captured memories from our historic journey — founding meetings, student gatherings, and community moments.
         </p>
       </div>
@@ -110,20 +110,21 @@ export default function Events() {
             <div className="flex items-center gap-4 mb-6">
               <div className="h-px flex-1 bg-green-900/60" />
               <div className="text-center">
-                <div className="text-green-400 text-xs font-semibold uppercase tracking-widest mb-1">{event.date}</div>
+                <div className="text-yellow-400 text-xs font-semibold uppercase tracking-widest mb-1">{event.date}</div>
                 <h2 className="text-xl sm:text-2xl font-bold text-white">{event.title}</h2>
-                <div className="text-gray-500 text-xs mt-1">📍 {event.venue} · {event.photos.length} photos</div>
+                <div className="text-green-400/70 text-xs mt-1">📍 {event.venue} · {event.photos.length} photos</div>
               </div>
               <div className="h-px flex-1 bg-green-900/60" />
             </div>
 
-            {/* Photo grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+            {/* Photo grid — masonry, respects each photo's natural aspect ratio */}
+            <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-2 sm:gap-3 [&>*]:mb-2 sm:[&>*]:mb-3">
               {event.photos.map((photo, pIdx) => (
                 <button
                   key={pIdx}
                   onClick={() => setLightbox({ eventIdx: eIdx, photoIdx: pIdx })}
-                  className="group relative aspect-square overflow-hidden rounded-xl bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="group relative block w-full overflow-hidden rounded-xl bg-green-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 break-inside-avoid animate-fade-in"
+                  style={{ animationDelay: `${(pIdx % 15) * 50}ms` }}
                   aria-label={photo.caption}
                 >
                   <img
@@ -132,13 +133,13 @@ export default function Events() {
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading={pIdx < 10 ? "eager" : "lazy"}
                   />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-green-950/0 group-hover:bg-green-950/50 transition-all duration-300 flex items-center justify-center">
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/10 backdrop-blur-sm rounded-full p-2">
                       <Camera className="h-5 w-5 text-white" />
                     </div>
                   </div>
                   {/* Photo number */}
-                  <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-2 right-2 bg-green-950/60 text-white text-[10px] px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     {pIdx + 1}/{event.photos.length}
                   </div>
                 </button>
@@ -153,7 +154,7 @@ export default function Events() {
       {/* Lightbox */}
       {lightbox !== null && (
         <div
-          className="fixed inset-0 z-[100] bg-black/97 flex items-center justify-center"
+          className="fixed inset-0 z-[100] bg-green-950/97 flex items-center justify-center"
           onClick={() => setLightbox(null)}
         >
           {/* Close */}
@@ -207,7 +208,7 @@ export default function Events() {
                 key={i}
                 onClick={(e) => { e.stopPropagation(); setLightbox({ ...lightbox!, photoIdx: i }); }}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === lightbox.photoIdx ? "w-6 bg-green-400" : "w-1.5 bg-white/30"
+                  i === lightbox.photoIdx ? "w-6 bg-yellow-400" : "w-1.5 bg-white/30"
                 }`}
               />
             ))}

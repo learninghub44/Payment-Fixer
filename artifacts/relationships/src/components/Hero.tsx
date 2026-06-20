@@ -41,7 +41,7 @@ export const Hero = () => {
   return (
     <section
       id="home"
-      className="relative min-h-screen w-full overflow-hidden bg-gray-900"
+      className="relative min-h-screen w-full overflow-hidden bg-green-950"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

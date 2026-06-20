@@ -106,7 +106,7 @@ export const Footer = () => (
             © {new Date().getFullYear()} Kuria West Students Association (KUWESA). All rights reserved.
           </p>
           <div className="flex items-center gap-1.5 text-xs text-green-400">
-            Made with <Heart className="h-3.5 w-3.5 text-red-400 fill-red-400" /> for Kuria West students
+            Made with <Heart className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" /> for Kuria West students
           </div>
         </div>
         <div className="mt-3 text-center text-[11px] text-green-600">
