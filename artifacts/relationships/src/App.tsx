@@ -14,6 +14,8 @@ import MemberLogin from "./pages/MemberLogin.tsx";
 import MemberDashboard from "./pages/MemberDashboard.tsx";
 import Events from "./pages/Events.tsx";
 import PaymentCancelled from "./pages/PaymentCancelled.tsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import TermsAndConditions from "./pages/TermsAndConditions.tsx";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
           <Route path="/member/dashboard" element={<MemberDashboard />} />
           <Route path="/events" element={<Events />} />
           <Route path="/payment/cancelled" element={<PaymentCancelled />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

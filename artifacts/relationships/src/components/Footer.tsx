@@ -105,6 +105,11 @@ export const Footer = () => (
           <p className="text-xs text-green-100 text-center sm:text-left">
             © {new Date().getFullYear()} Kuria West Students Association (KUWESA). All rights reserved.
           </p>
+          <div className="flex items-center gap-4 text-xs text-green-100">
+            <Link to="/privacy" className="hover:text-yellow-300 transition-colors">Privacy Policy</Link>
+            <span className="text-green-400">·</span>
+            <Link to="/terms" className="hover:text-yellow-300 transition-colors">Terms & Conditions</Link>
+          </div>
         </div>
         <div className="mt-3 text-center text-[11px] text-green-200">
           Website powered by{" "}
