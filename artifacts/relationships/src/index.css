@@ -7,26 +7,27 @@
 /* ── CSS Variables ───────────────────────────────────────────── */
 @layer base {
   :root {
-    /* KUWESA Green Brand */
+    /* KUWESA Green & Gold Brand */
     --background: 0 0% 100%;
-    --foreground: 220 15% 12%;
-    --primary: 142 72% 29%;          /* #16a34a green-700 */
+    --foreground: 145 22% 12%;
+    --primary: 142 53% 28%;          /* refined forest green */
     --primary-foreground: 0 0% 100%;
-    --primary-deep: 144 80% 16%;     /* deep green */
-    --secondary: 142 30% 96%;
-    --secondary-foreground: 142 72% 29%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 45 96% 52%;            /* gold/yellow */
-    --accent-foreground: 0 0% 0%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 142 72% 29%;
+    --primary-deep: 144 55% 16%;     /* deep green */
+    --primary-glow: 142 53% 40%;
+    --secondary: 142 28% 95%;
+    --secondary-foreground: 142 53% 24%;
+    --muted: 100 12% 95%;
+    --muted-foreground: 130 8% 40%;
+    --accent: 38 75% 50%;            /* warm marigold gold */
+    --accent-foreground: 30 40% 14%;
+    --border: 120 12% 89%;
+    --input: 120 12% 89%;
+    --ring: 142 53% 28%;
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 12%;
-    --destructive: 0 84% 60%;
+    --card-foreground: 145 22% 12%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --radius: 0.75rem;
+    --radius: 0.875rem;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,39 +43,49 @@
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: hsl(var(--background));
     color: hsl(var(--foreground));
-    line-height: 1.6;
+    line-height: 1.65;
     overflow-x: hidden;
+    font-feature-settings: "ss01" 1;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'DM Sans', sans-serif;
     font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+  }
+
+  ::selection {
+    background: hsl(var(--accent) / 0.35);
+    color: hsl(var(--primary-deep));
+  }
+
+  a {
+    text-decoration-thickness: 1px;
   }
 }
 
 /* ── Tailwind color overrides ────────────────────────────────── */
 @layer utilities {
   /* Primary green */
-  .bg-primary    { background-color: hsl(142 72% 29%) !important; }
-  .text-primary  { color: hsl(142 72% 29%) !important; }
-  .border-primary { border-color: hsl(142 72% 29%) !important; }
-  .ring-primary  { --tw-ring-color: hsl(142 72% 29%) !important; }
-  .hover\:bg-primary:hover { background-color: hsl(142 72% 29%) !important; }
+  .bg-primary    { background-color: hsl(142 53% 28%) !important; }
+  .text-primary  { color: hsl(142 53% 28%) !important; }
+  .border-primary { border-color: hsl(142 53% 28%) !important; }
+  .ring-primary  { --tw-ring-color: hsl(142 53% 28%) !important; }
+  .hover\:bg-primary:hover { background-color: hsl(142 53% 28%) !important; }
 
   /* Primary deep */
-  .bg-primary-deep { background-color: hsl(144 80% 14%) !important; }
-  .text-primary-deep { color: hsl(144 80% 14%) !important; }
+  .bg-primary-deep { background-color: hsl(144 55% 16%) !important; }
+  .text-primary-deep { color: hsl(144 55% 16%) !important; }
 
   /* Primary foreground */
   .text-primary-foreground { color: #fff !important; }
   .bg-primary-foreground { background-color: #fff !important; }
 
   /* Accent gold */
-  .bg-accent    { background-color: hsl(45 96% 52%) !important; }
-  .text-accent  { color: hsl(45 96% 52%) !important; }
-  .border-accent { border-color: hsl(45 96% 52%) !important; }
+  .bg-accent    { background-color: hsl(38 75% 50%) !important; }
+  .text-accent  { color: hsl(38 75% 50%) !important; }
+  .border-accent { border-color: hsl(38 75% 50%) !important; }
 
   /* Custom layout */
   .container-custom {
@@ -106,21 +117,21 @@
 
   /* Backgrounds */
   .bg-gradient-soft {
-    background: linear-gradient(160deg, hsl(142 30% 97%) 0%, hsl(0 0% 100%) 60%, hsl(142 20% 96%) 100%);
+    background: linear-gradient(160deg, hsl(142 28% 97%) 0%, hsl(0 0% 100%) 55%, hsl(38 40% 97%) 100%);
   }
 
   .bg-gradient-hero {
-    background: linear-gradient(135deg, hsl(144 80% 14%) 0%, hsl(142 72% 20%) 50%, hsl(144 70% 10%) 100%);
+    background: linear-gradient(135deg, hsl(144 55% 15%) 0%, hsl(142 50% 22%) 50%, hsl(144 50% 11%) 100%);
   }
 
   .bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(142 72% 29%), hsl(142 72% 22%));
+    background: linear-gradient(135deg, hsl(142 53% 30%), hsl(142 53% 22%));
   }
 
   /* Shadows */
-  .shadow-soft   { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .shadow-card   { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-  .shadow-elegant { box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+  .shadow-soft   { box-shadow: 0 1px 2px rgba(20,23,18,0.06); }
+  .shadow-card   { box-shadow: 0 6px 20px rgba(20,23,18,0.08), 0 1px 3px rgba(20,23,18,0.06); }
+  .shadow-elegant { box-shadow: 0 12px 36px rgba(20,23,18,0.14), 0 2px 8px rgba(20,23,18,0.08); }
 
   /* Transitions */
   .transition-smooth { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
@@ -135,11 +146,11 @@
     right: 0;
     font-size: 8rem;
     font-weight: 900;
-    color: hsl(142 72% 29% / 0.04);
+    color: hsl(142 53% 28% / 0.05);
     line-height: 1;
     pointer-events: none;
     user-select: none;
-    font-family: 'Poppins', sans-serif;
+    font-family: 'DM Sans', sans-serif;
   }
 
   /* Hero button variants */
@@ -149,7 +160,7 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.875rem 2rem;
-    border-radius: 0.75rem;
+    border-radius: 0.875rem;
     font-weight: 700;
     font-size: 1rem;
     transition: all 0.2s ease;
@@ -159,14 +170,14 @@
   }
 
   .btn-primary {
-    background: hsl(142 72% 29%);
+    background: hsl(142 53% 28%);
     color: white;
-    box-shadow: 0 4px 14px hsl(142 72% 29% / 0.35);
+    box-shadow: 0 4px 14px hsl(142 53% 28% / 0.3);
   }
   .btn-primary:hover {
-    background: hsl(142 72% 24%);
+    background: hsl(142 53% 23%);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px hsl(142 72% 29% / 0.4);
+    box-shadow: 0 6px 20px hsl(142 53% 28% / 0.38);
   }
 
   /* Reveal animations */
