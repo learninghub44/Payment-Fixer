@@ -132,7 +132,7 @@ export function createApp(): express.Express {
 
   // ── Session ───────────────────────────────────────────────────────────────
   app.use(session({
-    secret: process.env.SESSION_SECRET || "kuwesa-must-change-this-secret",
+    secret: process.env.SESSION_SECRET || (() => { throw new Error("SESSION_SECRET env var is required"); })(),
     resave: false,
     saveUninitialized: false,
     name: "kuwesa.sid",

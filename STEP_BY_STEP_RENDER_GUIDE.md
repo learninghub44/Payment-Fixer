@@ -98,7 +98,7 @@ In the **"Advanced"** section, add a **Custom Redirect**:
 ### 4.2 Test Everything
 1. **Frontend**: Visit `https://kuwesa-frontend.onrender.com`
 2. **API Health**: Visit `https://kuwesa-api.onrender.com/api/healthz`
-3. **Admin Login**: Use `kuwesa23@gmail.com` / `Facebook@2025`
+3. **Admin Login**: Use `your SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (set in environment variables)`
 4. **Payment Test**: Try making a test payment
 
 ## Step 5: Database Setup (if not done)

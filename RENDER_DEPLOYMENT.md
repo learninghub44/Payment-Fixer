@@ -66,7 +66,7 @@ VITE_API_URL=https://kuwesa-api.onrender.com/api
 ### 8. Post-Deployment
 1. Access frontend: `https://kuwesa-frontend.onrender.com`
 2. Access API: `https://kuwesa-api.onrender.com/api`
-3. Test admin login: `kuwesa23@gmail.com` / `Facebook@2025`
+3. Test admin login: `your SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (set in environment variables)`
 4. Test payment functionality with Pesapal
 
 ## Important Notes

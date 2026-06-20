@@ -37,7 +37,7 @@
 
 ## Post-Deployment ✅
 - [ ] Update Pesapal IPN URL: `https://kuwesa-payment-api.onrender.com/api/payments/ipn`
-- [ ] Test admin login: `kuwesa23@gmail.com` / `Facebook@2025`
+- [ ] Test admin login: `your SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (set in environment variables)`
 - [ ] Test member registration
 - [ ] Test payment flow (small amount)
 - [ ] Test leader photo upload

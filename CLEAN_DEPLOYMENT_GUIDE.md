@@ -84,7 +84,7 @@ VITE_API_URL=https://kuwesa-payment-api.onrender.com/api
 
 ## Step 5: Post-Deployment Tasks
 1. **Update Pesapal IPN**: Set callback to `https://kuwesa-payment-api.onrender.com/api/payments/ipn`
-2. **Test admin login**: `kuwesa23@gmail.com` / `Facebook@2025`
+2. **Test admin login**: `your SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (set in environment variables)`
 3. **Test payment flow**
 4. **Test file uploads** (leader photos)
 

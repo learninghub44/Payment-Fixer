@@ -10,22 +10,30 @@ async function seed() {
   await ensureSchema();
   console.log("✓ Schema ensured");
 
-  const hash = await bcrypt.hash("Facebook@2025", 12);
+  const adminEmail    = process.env.SEED_ADMIN_EMAIL    || "admin@example.com";
+  const adminUsername = process.env.SEED_ADMIN_USERNAME || "admin";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    console.error("ERROR: SEED_ADMIN_PASSWORD env var is required. Aborting seed.");
+    process.exit(1);
+  }
+
+  const hash = await bcrypt.hash(adminPassword, 12);
   await db.insert(adminUsers).values({
-    email: "kuwesa23@gmail.com",
-    username: "kuwesa23",
-    fullName: "KUWESA Admin",
+    email:        adminEmail,
+    username:     adminUsername,
+    fullName:     "KUWESA Admin",
     passwordHash: hash,
-    role: "admin",
-    status: "active",
+    role:         "admin",
+    status:       "active",
   }).onConflictDoNothing();
-  console.log("✓ Admin ensured: kuwesa23@gmail.com / Facebook@2025");
+  console.log(`✓ Admin ensured: ${adminEmail}`);
 
   const existing = await db.select().from(leaders);
   if (existing.length === 0) {
     await db.insert(leaders).values([
-      { name: "AGREY CHACHA",  position: "Founder President", phone: "+254745523865", sortOrder: 1 },
-      { name: "SHARON OTAIGO", position: "Vice President",     phone: "+254748207838", sortOrder: 2 },
+      { name: "AGREY CHACHA",  position: "Founder President", sortOrder: 1 },
+      { name: "SHARON OTAIGO", position: "Vice President",     sortOrder: 2 },
     ]);
     console.log("✓ Leaders seeded.");
   } else {

@@ -21,18 +21,25 @@ async function seedIfNeeded() {
 
     const { rows: admins } = await pool.query(`SELECT id FROM admin_users LIMIT 1`);
     if (admins.length === 0) {
-      const hash = await bcrypt.hash("Facebook@2025", 12);
-      await pool.query(
-        `INSERT INTO admin_users (email, username, full_name, password_hash, role, status)
-         VALUES ($1,$2,$3,$4,'admin','active') ON CONFLICT DO NOTHING`,
-        ["kuwesa23@gmail.com", "kuwesa23", "KUWESA Admin", hash]
-      );
-      console.log("✓ Admin seeded: kuwesa23@gmail.com / Facebook@2025");
+      const adminEmail    = process.env.SEED_ADMIN_EMAIL    || "admin@example.com";
+      const adminUsername = process.env.SEED_ADMIN_USERNAME || "admin";
+      const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+      if (!adminPassword) {
+        console.warn("⚠ SEED_ADMIN_PASSWORD not set — skipping admin seed. Set it in your environment.");
+      } else {
+        const hash = await bcrypt.hash(adminPassword, 12);
+        await pool.query(
+          `INSERT INTO admin_users (email, username, full_name, password_hash, role, status)
+           VALUES ($1,$2,$3,$4,'admin','active') ON CONFLICT DO NOTHING`,
+          [adminEmail, adminUsername, "KUWESA Admin", hash]
+        );
+        console.log(`✓ Admin seeded: ${adminEmail}`);
+      }
     } else {
       console.log("✓ Admin exists");
     }
 
-    // Ensure leaders table and seed leaders
+    // Ensure leaders table and seed default leaders
     await pool.query(`
       CREATE TABLE IF NOT EXISTS leaders (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -48,9 +55,9 @@ async function seedIfNeeded() {
     const { rows: lRows } = await pool.query(`SELECT id FROM leaders LIMIT 1`);
     if (lRows.length === 0) {
       await pool.query(`
-        INSERT INTO leaders (name, position, phone, sort_order) VALUES
-        ('AGREY CHACHA', 'Founder President', '+254745523865', 1),
-        ('SHARON OTAIGO', 'Vice President', '+254748207838', 2)
+        INSERT INTO leaders (name, position, sort_order) VALUES
+        ('AGREY CHACHA', 'Founder President', 1),
+        ('SHARON OTAIGO', 'Vice President', 2)
         ON CONFLICT DO NOTHING
       `);
       console.log("✓ Leaders seeded");

@@ -49,3 +49,13 @@ Thumbs.db
 .local/
 attached_assets/*.zip
 attached_assets/
+
+# Secrets & sensitive files
+session-secret.txt
+*.secret
+.env
+.env.*
+!.env.example
+
+# Large build artifacts
+artifacts/mockup-sandbox/
