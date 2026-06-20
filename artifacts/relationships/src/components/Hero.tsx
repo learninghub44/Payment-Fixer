@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCountUp } from "@/hooks/useCountUp";
 import logo from "@/assets/kuwesa-logo.png";
 import img1 from "@/assets/kuwesa-event-1.webp";
 import img2 from "@/assets/kuwesa-event-2.webp";
@@ -24,6 +25,23 @@ const SLIDES = [
   { src: img7, caption: "Members at the KUWESA founding meeting" },
   { src: img10, caption: "Agrey Chacha — Founder President of KUWESA" },
 ];
+
+const STATS = [
+  { n: "7", label: "Wards" },
+  { n: "200+", label: "Members" },
+  { n: "5", label: "Programs" },
+  { n: "1", label: "Family" },
+];
+
+const StatCard = ({ n, label }: { n: string; label: string }) => {
+  const { ref, display } = useCountUp(n);
+  return (
+    <div ref={ref} className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20">
+      <div className="text-2xl sm:text-3xl font-black text-yellow-400">{display}</div>
+      <div className="text-xs text-white/70 font-medium mt-0.5">{label}</div>
+    </div>
+  );
+};
 
 export const Hero = () => {
   const [current, setCurrent] = useState(0);
@@ -96,16 +114,8 @@ export const Hero = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl w-full">
-          {[
-            { n: "7", label: "Wards" },
-            { n: "200+", label: "Members" },
-            { n: "5", label: "Programs" },
-            { n: "1", label: "Family" },
-          ].map(({ n, label }) => (
-            <div key={label} className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20">
-              <div className="text-2xl sm:text-3xl font-black text-yellow-400">{n}</div>
-              <div className="text-xs text-white/70 font-medium mt-0.5">{label}</div>
-            </div>
+          {STATS.map(({ n, label }) => (
+            <StatCard key={label} n={n} label={label} />
           ))}
         </div>
       </div>
